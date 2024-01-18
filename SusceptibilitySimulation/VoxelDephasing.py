@@ -1,6 +1,7 @@
 """
 Implementation based on:
-"Passive Tracking Exploiting Local Signal Conservation: The White Marker Phenomenon"
+"Passive Tracking Exploiting Local Signal Conservation: The White Marker Phenomenon",
+Jan-Henry Seppenwoolde, Max A. Viergever, Chris J. G. Bakker
 """
 
 import matplotlib.pyplot as plt
@@ -16,19 +17,30 @@ def normalize(array):
 
 """
 Changeable variables
+
+Variables are chosen to be real-MRI sequence specific for my thesis project.
+Sequence data
+  - date: 07.12.2023
+  - series: 2DGRE 1.2
+  - slice: 8mm
+  - repetition time: 2410.56
+  - echo time: 4.45
+  - FOV: 350*350mm
+  - resolution: 288*288px
+  - pixel spacing: 1.2152777910233
 """
 image_resolution = 288  # pixels (square ratio)
 voxel_size = 1.2152777910233  # mm
 slice_thickness = 8  # mm
-echo_time_ms = 4000.45  # ms
+echo_time_ms = 4.45  # ms
 b0 = 1.5  # Tesla
 
 """
-Not changeable variables
+Dynamic variables
 """
 TE = echo_time_ms * 0.001  # seconds
-delta_x_V = voxel_size * 0.001  # Voxel size in m
-gyromagnetic_ratio = 425763847  # in Hz/T
+delta_x_V = voxel_size * 0.01
+gyromagnetic_ratio = 42576384.7  # in Hz/T
 
 image_size = int(image_resolution * voxel_size / 2)
 # Spatial range for the simulation (in mm)
@@ -72,7 +84,12 @@ threshold = 0.95
 mask = np.abs(S_coronal_real) < threshold
 masked_signal = np.where(mask, S_coronal_real, np.nan)
 
-# plt.figure(figsize=(image_resolution / 100, image_resolution / 100))
+zoom = 1
+# To match the image pixel resolution of the MRI image.
+plt.figure(figsize=(image_resolution / 100, image_resolution / 100))
+plt.imshow(S_coronal_real, extent=(x.min(), x.max(), y.min(), y.max()), cmap="gray")
+plt.axis('off')
+plt.show()
 
 plt.figure(figsize=(18, 12))
 
@@ -118,5 +135,4 @@ plt.ylabel("y")
 plt.colorbar()
 
 plt.tight_layout()
-
 plt.show()
