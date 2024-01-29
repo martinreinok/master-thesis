@@ -2,3 +2,11 @@
 images/
 __pycache__/
 generated_dataset/
+Dataset001_Susceptibility/
+!Dataset001_Susceptibility/imagesTr
+!Dataset001_Susceptibility/labelsTr
+imagesTr/*
+!imagesTr/.gitkeep
+labelsTr/*
+!labelsTr/.gitkeep
+MODEL/

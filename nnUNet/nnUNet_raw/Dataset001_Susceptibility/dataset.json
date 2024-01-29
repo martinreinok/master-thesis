@@ -1,0 +1,11 @@
+{
+ "channel_names": {
+   "0": "noNorm"
+ },
+ "labels": {
+   "background": 0,
+   "susceptibility": 1
+ },
+ "numTraining": 480,
+ "file_ending": ".png"
+ }
