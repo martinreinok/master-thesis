@@ -10,3 +10,4 @@ imagesTr/*
 labelsTr/*
 !labelsTr/.gitkeep
 MODEL/
+MRI_LABS/
