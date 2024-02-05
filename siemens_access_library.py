@@ -51,7 +51,7 @@ class Access:
             response = message.get('response', '')
             print("Service:", service)
             print("Request:", request)
-            print("Response:", response)
+            # print("Response:", response)
         except json.JSONDecodeError as e:
             print("Error decoding JSON:", e)
         return [service, request, response, message]
