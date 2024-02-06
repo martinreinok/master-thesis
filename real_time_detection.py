@@ -35,7 +35,7 @@ class CNNModel:
             use_gaussian=True,
             use_mirroring=True,
             perform_everything_on_gpu=True,
-            device=torch.device('cuda', 0),
+            device=torch.device('cpu', 0),
             verbose=False,
             verbose_preprocessing=False,
             allow_tqdm=False
@@ -55,16 +55,17 @@ class CNNModel:
                 image_array = np.frombuffer(decoded_data, dtype=np.uint16)
                 image_array = np.reshape(image_array, (image_data[2].value.image.dimensions.columns,
                                                        image_data[2].value.image.dimensions.rows))
-                # 16-bit to 8-bit conversion
-                image = (image_array / 65535.0 * 255).astype(np.uint8)
-                image = cv2.resize(image_array, (512, 512)).astype(np.float32) / 255.0
+                # How to do this conversion properly, 16-bit to 8-bit, but the image max usually caps at ~1400
+                image = (image_array / image_array.max() * 255).astype(np.uint8)
+                image = cv2.resize(image, (512, 512)).astype(np.float32) / 255.0
                 cnn_input = image.reshape(1, 1, image.shape[0], image.shape[1])
                 props = {'spacing': (999, 1, 1)}
-                # output = self.model.predict_single_npy_array(cnn_input, props, None, None, True)[0]
-                # output_display = (output * 255).astype(np.uint8).reshape(512, 512)
+                output = self.model.predict_single_npy_array(cnn_input, props, None, None, True)[0]
+                output_display = (output * 255).astype(np.uint8).reshape(512, 512)
                 image_display = (image * 255).astype(np.uint8)
                 cv2.imshow("Input Image", image_display)
-                # cv2.imshow("Output Image", output_display)
+                cv2.imshow("Output Image", output_display)
+                print(f"output_mix/max: {output.min()}/{output.max()}, output_display_mix/max: {output_display.min()}/{output_display.max()}")
                 cv2.waitKey(1)
             except Exception as error:
                 print(f"Error in callback: {error}")
@@ -93,7 +94,7 @@ Subnet: 255.255.255.0
 Gateway: 192.168.182.0
 DNS1: 192.168.182.1
 """
-Access = access_library.Access("10.89.184.9", ssl_verify=True)
+Access = access_library.Access("10.89.184.9", ssl_verify=False, version="v1")
 Model = CNNModel()
 
 active_check = Access.get_is_active()
@@ -106,7 +107,8 @@ print(f"Version: {version.value}")
 
 register = Access.register(name="UTwente", start_date="20231102", warn_date="20251002",
                            expire_date="20251102", system_id="152379",
-                           hash="uTwo2ohlQvMNHhfrzceCRzfRSLYDAw7zqojGjlP%2BCEmqPq1IxUoyx5hOGYbiO%2FEIyiaA4oFHFB2fwTctDbRWew%3D%3D")
+                           hash="uTwo2ohlQvMNHhfrzceCRzfRSLYDAw7zqojGjlP%2BCEmqPq1IxUoyx5hOGYbiO%2FEIyiaA4oFHFB2fwTctDbRWew%3D%3D",
+                           informal_name="Martin Reinok Python Client")
 print(f"Register: {register.result.success}, Session: {register.sessionId}")
 
 image_format = Access.set_image_format(register.sessionId, "raw16bit")
