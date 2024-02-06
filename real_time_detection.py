@@ -87,7 +87,13 @@ def run_websocket_in_thread(session_id, callback_function):
     loop.run_until_complete(Access.connect_websocket(session_id, callback_function))
 
 
-Access = access_library.Access("127.0.0.1")
+"""
+Client IP: 192.168.182.20
+Subnet: 255.255.255.0
+Gateway: 192.168.182.0
+DNS1: 192.168.182.1
+"""
+Access = access_library.Access("10.89.184.9", ssl_verify=True)
 Model = CNNModel()
 
 active_check = Access.get_is_active()
@@ -98,7 +104,9 @@ print(f"Active: {active_check.value}")
 version = Access.get_version()
 print(f"Version: {version.value}")
 
-register = Access.register()
+register = Access.register(name="UTwente", start_date="20231102", warn_date="20251002",
+                           expire_date="20251102", system_id="152379",
+                           hash="uTwo2ohlQvMNHhfrzceCRzfRSLYDAw7zqojGjlP%2BCEmqPq1IxUoyx5hOGYbiO%2FEIyiaA4oFHFB2fwTctDbRWew%3D%3D")
 print(f"Register: {register.result.success}, Session: {register.sessionId}")
 
 image_format = Access.set_image_format(register.sessionId, "raw16bit")

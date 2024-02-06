@@ -59,8 +59,12 @@ class Access:
     async def connect_websocket(self, session_id, callback_function):
         url = f"wss://127.0.0.1:7788/SRC?sessionId={session_id}"
         ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-        ssl_context.check_hostname = False
-        ssl_context.verify_mode = ssl.CERT_NONE
+        ssl_context.check_hostname = True
+        ssl_context.verify_mode = ssl.CERT_REQUIRED
+        if not self.ssl_verify:
+            ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
         async with websockets.connect(url, ssl=ssl_context) as websocket:
             while True:
                 message = await websocket.recv()
@@ -86,7 +90,7 @@ class Access:
         url = f"{self.base_url}/getVersion"
         return self.send_request(url, data=None, request_type="GET")
 
-    def register(self, name="Access_i SDK", comment=None, start_date="20180115", end_date="20391215",
+    def register(self, name="Access_i SDK", comment=None, start_date="20180115", warn_date="20391215",
                  expire_date="20400115", system_id="99999999999999", is_read_option_available=True,
                  is_execute_option_available=True, is_advanced_option_available=True, version="1.0",
                  hash="drXXpUNoR8GVxi3GhXL2Gt3S7XSS8MPTyTM75ehUxnfIUBhmmPr%2BL2qTXWnS0csVoGiFoUZS1pVCteO3JxGO7A%3D%3D",
@@ -102,7 +106,7 @@ class Access:
             "Name": name,
             "Comment": comment,
             "StartDate": start_date,
-            "WarnDate": end_date,
+            "WarnDate": warn_date,
             "ExpireDate": expire_date,
             "SystemId": system_id,
             "IsReadOptionAvailable": is_read_option_available,
@@ -142,3 +146,29 @@ class Access:
         url = f"{self.base_url_v2}/image/connectServiceToDefaultWebSocket"
         data = {"sessionId": session_id}
         return self.send_request(url, data)
+
+
+Access = Access("10.89.184.9")
+
+active_check = Access.get_is_active()
+if active_check is None:
+    raise SystemExit("Server not active")
+print(f"Active: {active_check.value}")
+
+version = Access.get_version()
+print(f"Version: {version.value}")
+
+register = Access.register(name="UTwente", start_date="20231102", warn_date="20251002",
+                           expire_date="20251102", system_id="152379",
+                           hash="uTwo2ohlQvMNHhfrzceCRzfRSLYDAw7zqojGjlP%2BCEmqPq1IxUoyx5hOGYbiO%2FEIyiaA4oFHFB2fwTctDbRWew%3D%3D")
+print(f"Register: {register.result.success}, Session: {register.sessionId}")
+
+image_format = Access.set_image_format(register.sessionId, "raw16bit")
+
+"""
+Initialize websocket loop for image service
+"""
+# Connect the image service to existing websocket
+
+image_service = Access.connect_image_service_to_default_web_socket(register.sessionId)
+print(f"ImageServiceConnection: {image_service.result.success}")
