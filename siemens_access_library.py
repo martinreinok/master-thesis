@@ -28,6 +28,7 @@ class Access:
         self.timeout = timeout
         self.ssl_verify = ssl_verify
         self.headers = {"Content-Type": "application/json"}
+        self.session_id = None
 
     @staticmethod
     def response_to_object(json_response):
@@ -114,33 +115,207 @@ class Access:
             "Hash": hash
         },
             "name": informal_name}
-        return self.send_request(url, data)
+        reply = self.send_request(url, data)
+        self.session_id = reply.sessionId
+        return reply
 
-    def set_image_format(self, session_id, value: Literal["dicom", "raw16bit"] = "raw16bit"):
+    def set_image_format(self, value: Literal["dicom", "raw16bit"] = "raw16bit"):
         """
         Either "value": "dicom | raw16bit"
         Response example:
          - "result": {"success":true,"reason":"ok","time":"20170608_143325.423"}
         """
         url = f"{self.base_url_version}/image/setImageFormat"
-        data = {"sessionId": session_id, "value": value}
+        data = {"sessionId": self.session_id, "value": value}
         return self.send_request(url, data)
 
-    def get_last_series_number(self, session_id):
+    def get_last_series_number(self):
         """
         Response example:
          - "result":{"success":true,"reason":"ok","time":"20170608T143325.423"},
          - "value":1
         """
         url = f"{self.base_url_version}/image/getLastSeriesNumber"
-        data = {"sessionId": session_id}
+        data = {"sessionId": self.session_id}
         return self.send_request(url, data, request_type="GET")
 
-    def connect_image_service_to_default_web_socket(self, session_id):
+    def connect_image_service_to_default_web_socket(self):
         """
         Response example:
          - "result":{"success":true,"reason":"ok","time":"20170608T143325.423"}
         """
         url = f"{self.base_url_version}/image/connectServiceToDefaultWebSocket"
-        data = {"sessionId": session_id}
+        data = {"sessionId": self.session_id}
         return self.send_request(url, data)
+
+    def get_configured_parameters(self):
+        """
+        Response example:
+         - "result":{"success":true,"reason":"ok","time":"20170608T143325.423"},
+         - "value":[{
+            - "index":1,
+            - "id":"26eb060c-553d-4c15-bf5b23cf29012763",
+            - "label":"ABC",
+            - "type":"ABC",
+            - "unit":"ABC",
+            - "ProtocolTag":"ABC"},
+            - {"index":1,
+            - "id":"26eb060c-553d-4c15-bf5b23cf29012763",
+            - "label":"ABC",
+            - "type":"ABC",
+            - "unit":"ABC",
+            - "ProtocolTag":"ABC"}]
+        """
+        url = f"{self.base_url_version}/parameter/configured/getConfiguredParameters"
+        data = {"sessionId": self.session_id}
+        return self.send_request(url, data, "GET")
+
+    def get_slice_position_dcs(self):
+        """
+        Response example:
+         - "result":{"success":true,"reason":"ok","time":"20170608T143325.423"},
+         - "value":{"x":10.0,"y":10.0,"z":20.0}
+        """
+        url = f"{self.base_url_version}/parameter/standard/getSlicePositionDcs"
+        data = {"sessionId": self.session_id}
+        return self.send_request(url, data, "GET")
+
+    def get_slice_position_pcs(self):
+        """
+        Response example:
+         - "result":{"success":true,"reason":"ok","time":"20170608T143325.423"},
+         - "value":{"sag":10.0,"cor":-10.0,"tra":-20.0}
+        """
+        url = f"{self.base_url_version}/parameter/standard/getSlicePositionPcs"
+        data = {"sessionId": self.session_id}
+        return self.send_request(url, data, "GET")
+
+    def get_slice_orientation_dcs(self):
+        """
+        Response example:
+         - "result":{"success":true,"reason":"ok","time":"20170608T143325.423"},
+         - "normal":{"x":0,"y":0,"z":-1.0},
+         - "phase":{"x":0,"y":-1.0,"z":0},
+         - "read":{"x":-1.0,"y":0,"z":0}
+        """
+        url = f"{self.base_url_version}/parameter/standard/getSliceOrientationDcs"
+        data = {"sessionId": self.session_id}
+        return self.send_request(url, data, "GET")
+
+    def get_slice_orientation_pcs(self):
+        """
+        Response example:
+         - "result":{"success":true,"reason":"ok","time":"20170608T143325.423"},
+         - "normal":{"sag":0,"cor":0,"tra":1.0},
+         - "phase":{"sag":0,"cor":1.0,"tra":0},
+         - "read":{"sag":-1.0,"cor":0,"tra":0}
+        """
+        url = f"{self.base_url_version}/parameter/standard/getSliceOrientationPcs"
+        data = {"sessionId": self.session_id}
+        return self.send_request(url, data, "GET")
+
+    def get_slice_thickness(self):
+        """
+        Unit:mm
+        Response example:
+         - "result":{"success":true,"reason":"ok","time":"20170608T143325.423"},
+         - "value":2.5
+        """
+        url = f"{self.base_url_version}/parameter/standard/getSliceThickness"
+        data = {"sessionId": self.session_id}
+        return self.send_request(url, data, "GET")
+
+    def set_slice_thickness(self, value, allow_side_effects=True):
+        """
+        Unit:mm
+        Response example:
+         - "result":{"success":true,"reason":"ok","time":"20170608T143325.423"},
+         - "valueSet":3.5
+        """
+        url = f"{self.base_url_version}/parameter/standard/setSliceThickness"
+        data = {"sessionId": self.session_id, "value": value, "allowSideEffects": allow_side_effects}
+        return self.send_request(url, data)
+
+    def get_host_control_state(self):
+        """
+        Response example:
+         - "result":{"success":true,"reason":"ok","time":"20170608T143325.423"},
+         - "value":{
+            - "hasControl":true,
+            - "canRequestControl":false,
+            - "canReleaseControl":true,
+            - "cannotRequestControlReason":"clientInControl"}
+        """
+        url = f"{self.base_url_version}/hostControl/getState"
+        data = {"sessionId": self.session_id}
+        return self.send_request(url, data, "GET")
+
+    def request_host_control(self):
+        """
+        Response example:
+         - "result":{"success":true,"reason":"ok","time":"20170608T143325.423"}
+        """
+        url = f"{self.base_url_version}/hostControl/requestControl"
+        data = {"sessionId": self.session_id}
+        return self.send_request(url, data)
+
+    def release_host_control(self):
+        """
+        Response example:
+         - "result":{"success":true,"reason":"ok","time":"20170608T143325.423"}
+        """
+        url = f"{self.base_url_version}/hostControl/releaseControl"
+        data = {"sessionId": self.session_id}
+        return self.send_request(url, data)
+
+    def get_templates(self):
+        """
+        Response example:
+         - "result":{"success":true,"reason":"ok","time":"20170608T143325.423"},
+         - "value":[
+            - {"id":"26eb060c-553d-4c15-bf5b-23cf29012763","label":"Interactive Template 1","isInteractive":true},
+            - {"id":"abeb060c-553d-4c15-bf5b23cf29012763","label":"T2 Template","isInteractive":false}]}
+        """
+        url = f"{self.base_url_version}/templateExecution/getTemplates"
+        data = {"sessionId": self.session_id}
+        return self.send_request(url, data, "GET")
+
+    def get_templates_state(self):
+        """
+        Response example:
+         - "result":{"success":true,"reason":"ok","time":"20170608T143325.423"},
+         - "value":{
+            - "runningTemplate":{
+                - "isApplicable":true,
+                - "isTemplate":true,
+                - "isInteractive":true,
+                - "id":"26eb060c-553d-4c15-bf5b-23cf29012763",
+                - "label":"Interactive Template 1"},
+            - "canStart":false,
+            - "canStop":true,
+            - "canPause":true,
+            - "canContinue":false,
+            - "executionState":"scanning"}}
+        """
+        url = f"{self.base_url_version}/templateExecution/getState"
+        data = {"sessionId": self.session_id}
+        return self.send_request(url, data, "GET")
+
+    def start_template(self, template_id):
+        """
+        Response example:
+         - "result":{"success":true,"reason":"ok","time":"20170608T143325.423"}
+        """
+        url = f"{self.base_url_version}/templateExecution/start"
+        data = {"sessionId": self.session_id, "id": template_id}
+        return self.send_request(url, data)
+
+    def stop_template(self):
+        """
+        Response example:
+         - "result":{"success":true,"reason":"ok","time":"20170608T143325.423"}
+        """
+        url = f"{self.base_url_version}/templateExecution/stop"
+        data = {"sessionId": self.session_id}
+        return self.send_request(url, data)
+
