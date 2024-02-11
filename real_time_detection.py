@@ -1,5 +1,7 @@
 """
 https://github.com/MIC-DKFZ/nnUNet/blob/master/nnunetv2/inference/examples.py
+- Calibration phase
+- Tracking phase
 """
 # %matplotlib inline
 from skimage import measure
