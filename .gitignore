@@ -9,5 +9,5 @@ imagesTr/*
 !imagesTr/.gitkeep
 labelsTr/*
 !labelsTr/.gitkeep
-MODEL/
+MODEL_512/
 MRI_LABS/

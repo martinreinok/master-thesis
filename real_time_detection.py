@@ -10,21 +10,21 @@ from nnunetv2.inference.predict_from_raw_data import nnUNetPredictor
 import cv2
 import numpy as np
 from scipy.interpolate import splprep, splev
-import siemens_access_library as access_library
 import asyncio
-import threading
+from datetime import datetime
 import json
 from types import SimpleNamespace
 import time
 import base64
+import accessi as Access
+from asyncio import LifoQueue
 
 
 class CNNModel:
-    def __init__(self, accessi_instance: access_library.Access, path_to_model_directory="MODEL", checkpoint_name="checkpoint_final.pth", folds=(4,)):
+    def __init__(self, path_to_model_directory="MODEL", checkpoint_name="checkpoint_final.pth", folds=(4,)):
         self.model = self.prepare_cnn(path_to_model_directory, checkpoint_name, folds)
-        self.access_i = accessi_instance
 
-    def prepare_cnn(self, path_to_model_directory="MODEL", checkpoint_name="checkpoint_final.pth", folds=(4,)):
+    def prepare_cnn(self, path_to_model_directory, checkpoint_name, folds):
         """
         :param path_to_model_directory: must have dataset.json & folder containing the fold e.g. fold_4/checkpoint_final.pth
         :param checkpoint_name: e.g. checkpoint_final.pth
@@ -35,7 +35,7 @@ class CNNModel:
         print(f"GPU: {torch.cuda.get_device_name(0)}")
         predictor = nnUNetPredictor(
             tile_step_size=1,
-            use_gaussian=True,
+            use_gaussian=False,
             use_mirroring=True,
             perform_everything_on_gpu=True,
             device=torch.device('cuda', 0),
@@ -47,20 +47,13 @@ class CNNModel:
                                                        use_folds=folds)
         return predictor
 
-    async def image_callback_cnn(self, image_data):
+    def image_callback_cnn(self, image_data):
         if "imageStream" in image_data:
-            """
-            TODO: Ignore queue, take most up to date image.
-            TODO: Images can be stored but only latest should be processed.
-            TODO: Search "calibration" function
-            TODO: 256x256(px) images
-            """
             start_time = time.time()
             image_data = json.loads(json.dumps(image_data), object_hook=lambda d: SimpleNamespace(**d))
             image_buffer = image_data[2].value.image.data
+            image_timestamp = datetime.strptime(image_data[2].value.image.acquisition.time, '%H%M%S.%f')
             decoded_data = base64.b64decode(image_buffer)
-            configured_parameters = self.access_i.get_configured_parameters()
-            print(f"Configured Parameters: {configured_parameters}")
             try:
                 image_array = np.frombuffer(decoded_data, dtype=np.uint16)
                 image_array = np.reshape(image_array, (image_data[2].value.image.dimensions.columns,
@@ -73,17 +66,15 @@ class CNNModel:
                 output = self.model.predict_single_npy_array(cnn_input, props, None, None, True)[0]
                 output_display = (output * 255).astype(np.uint8).reshape(512, 512)
                 image_display = (image * 255).astype(np.uint8)
-                # print(f"Slice Thickness: {self.access_i.get_slice_thickness().value}, "
-                #       f"{self.access_i.get_slice_thickness().result}")
-                # print(f"Slice Position: {self.access_i.get_slice_position_dcs().value}")
-                # print(f"Slice Orientation Normal: {self.access_i.get_slice_orientation_dcs().normal}")
-                # print(f"Slice Orientation Read: {self.access_i.get_slice_orientation_dcs().read}")
                 cv2.imshow("Input Image", image_display)
                 cv2.imshow("Output Image", output_display)
                 cv2.waitKey(1)
             except Exception as error:
                 print(f"Error in callback: {error}")
             print("Image processing: %s seconds" % (time.time() - start_time))
+            latency = (datetime.strptime(datetime.now().strftime('%H%M%S.%f'), '%H%M%S.%f') - image_timestamp).total_seconds()
+            print(f"Image timestamp: {image_timestamp.time()} | "
+                  f"Latency: {latency} seconds")
 
 
 def draw_spline(image_data):
@@ -97,48 +88,63 @@ def draw_spline(image_data):
     return spline_points
 
 
-def run_websocket_in_thread(session_id, callback_function):
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(Access.connect_websocket(session_id, callback_function))
-
-
 """
 Client IP: 192.168.182.20
 Subnet: 255.255.255.0
 Gateway: 192.168.182.0
 DNS1: 192.168.182.1
 """
-Access = access_library.Access("10.89.184.9", ssl_verify=False, version="v1")
-Model = CNNModel(accessi_instance=Access)
+Access.config.ip_address = "127.0.0.1"  # "10.89.184.9"
+Access.config.version = "v2"
+Model = CNNModel(path_to_model_directory="MODEL_350")
 
-active_check = Access.get_is_active()
+
+active_check = Access.Remote.get_is_active()
 if active_check is None:
     raise SystemExit("Server not active")
 print(f"Access-i Active: {active_check.value}")
 
-version = Access.get_version()
+version = Access.Remote.get_version()
 print(f"Access-i Version: {version.value}")
 
-register = Access.register(name="UTwente", start_date="20231102", warn_date="20251002",
-                           expire_date="20251102", system_id="152379",
-                           hash="uTwo2ohlQvMNHhfrzceCRzfRSLYDAw7zqojGjlP%2BCEmqPq1IxUoyx5hOGYbiO%2FEIyiaA4oFHFB2fwTctDbRWew%3D%3D",
-                           informal_name="Martin Reinok Python Client")
+register = Access.Authorization.register(name="UTwente", start_date="20231102", warn_date="20251002",
+                                         expire_date="20251102", system_id="152379",
+                                         hash="uTwo2ohlQvMNHhfrzceCRzfRSLYDAw7zqojGjlP%2BCEmqPq1IxUoyx5hOGYbiO%2FEIyiaA4oFHFB2fwTctDbRWew%3D%3D",
+                                         informal_name="Martin Reinok Python Client")
 print(f"Access-i Register: {register.result.success}, Session: {register.sessionId}")
 if not register.result.success:
     raise SystemExit("Access-i Registering failed")
 
-image_format = Access.set_image_format("raw16bit")
+image_format = Access.Image.set_image_format("raw16bit")
 
-"""
-Initialize websocket loop for image service
-"""
 
-thread = threading.Thread(target=run_websocket_in_thread, args=(register.sessionId, Model.image_callback_cnn))
-thread.start()
-# Connect the image service to existing websocket
+async def image_processing_thread(queue: asyncio.Queue):
+    while True:
+        image_data = await queue.get()
+        while not queue.empty():
+            await queue.get()
+        Model.image_callback_cnn(image_data)
 
-image_service = Access.connect_image_service_to_default_web_socket()
-print(f"Access-i ImageServiceConnection: {image_service.result.success}")
 
-cv2.destroyAllWindows()
+async def main():
+    lifo_queue = LifoQueue()
+
+    # Run websocket
+    websocket_connected_event = asyncio.Event()
+    asyncio.create_task(Access.connect_websocket(lifo_queue, websocket_connected_event))
+    await websocket_connected_event.wait()
+
+    # Connect the image service to websocket
+    image_service = Access.Image.connect_to_default_web_socket()
+    print(f"Access-i ImageServiceConnection: {image_service}")
+
+    # Start image processing thread
+    asyncio.create_task(image_processing_thread(lifo_queue))
+
+    while True:
+        await asyncio.sleep(1)
+
+
+# Run the asyncio event loop
+if __name__ == "__main__":
+    asyncio.run(main())
