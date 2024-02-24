@@ -9,5 +9,8 @@ imagesTr/*
 !imagesTr/.gitkeep
 labelsTr/*
 !labelsTr/.gitkeep
-MODEL_512/
-MRI_LABS/
+MODELS/MODEL_512/
+mri_labs_images/
+guidewire_follow_testdata/
+nnUNet/
+MODELS/
