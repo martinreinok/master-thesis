@@ -1,19 +1,21 @@
+from random import random
+
 import cv2
 import sys
 import zmq
 import json
+import math
 import base64
 import pickle
 import asyncio
 import numpy as np
+import trackpy as tp
 from typing import Literal
 from threading import Thread
 from datetime import datetime
 from QtUI import Ui_MainWindow
 import accessi_local as Access
 from types import SimpleNamespace
-from scipy.linalg import block_diag
-from filterpy.kalman import KalmanFilter
 from PySide6.QtWidgets import QApplication, QMainWindow, QTableWidgetItem, QFileDialog
 from PySide6.QtCore import Signal, QObject
 
@@ -57,6 +59,7 @@ class MyMainWindow(QMainWindow):
         self.ui.button_get_parameter.clicked.connect(self.access_client.get_parameter)
         self.ui.button_set_parameter.clicked.connect(self.access_client.set_parameter)
         self.ui.button_select_output_dir.clicked.connect(self.select_output_directory)
+        self.ui.field_parameter_value.returnPressed.connect(self.access_client.set_parameter)
 
         """
         Checkboxes
@@ -350,20 +353,22 @@ class AccessiWebsocket(QObject):
                     _, metadata = convert_websocket_data_to_image(decoded_message)
                     self.status_websocket_signal.emit(f"Latency: {calculate_latency(metadata)}s")
                 except Exception as err:
-                    print(f"Websocket error: {err}")
+                    if "received 1000 (OK); then sent 1000 (OK)" not in str(err):
+                        print(f"Websocket error: {err}")
 
     async def main(self):
-        # Run websocket
-        websocket_connected_event = asyncio.Event()
-        asyncio.create_task(self.get_websocket_data(connected_event=websocket_connected_event))
-        await websocket_connected_event.wait()
-        image_service = Access.Image.connect_to_default_web_socket()
-        print(f"Access-i ImageServiceConnection: {image_service}")
-        Access.Image.set_image_format("raw16bit")
-        while window.ui.check_websocket_active.isChecked():
-            await asyncio.sleep(0.05)
-        else:
-            raise SystemExit
+        try:
+            # Run websocket
+            websocket_connected_event = asyncio.Event()
+            asyncio.create_task(self.get_websocket_data(connected_event=websocket_connected_event))
+            await websocket_connected_event.wait()
+            image_service = Access.Image.connect_to_default_web_socket()
+            print(f"Access-i ImageServiceConnection: {image_service}")
+            Access.Image.set_image_format("raw16bit")
+            while window.ui.check_websocket_active.isChecked():
+                await asyncio.sleep(0.05)
+        except Exception as error:
+            print("An error occurred:", error)
 
     def run_websocket_thread(self):
         try:
@@ -388,6 +393,7 @@ class VideoViewer:
         subscriber_socket = context.socket(zmq.SUB)
         subscriber_socket.connect("tcp://127.0.0.1:" + str(self.zmq_port))
         subscriber_socket.subscribe("")
+        subscriber_socket.RCVTIMEO = 200
 
         while self.checkbox.isChecked():
             try:
@@ -405,11 +411,18 @@ class VideoViewer:
                 resized_image = cv2.resize(image, (width, height))
                 cv2.imshow(self.window_name, resized_image)
                 cv2.waitKey(1)
+            except zmq.error.Again:
+                cv2.waitKey(1)
+                continue
             except Exception as e:
+                cv2.waitKey(1)
                 print(f"Error: {e}")
                 break
         else:
-            cv2.destroyWindow(self.window_name)
+            try:
+                cv2.destroyWindow(self.window_name)
+            except:
+                pass
 
 
 class ImageData:
@@ -487,6 +500,53 @@ class CNNModel(QObject):
                 self.status_cnn_signal.emit(f"Latency: {calculate_latency(metadata)}s")
 
 
+class ArtifactTracker:
+    """
+    Did not manage to get any existing trackers to work, so why not just reinvent the wheel...
+    """
+
+    def __init__(self, initial_coordinate, artifact_id, max_range=30):
+        self.max_range = max_range
+        self.coordinates = initial_coordinate
+        self.trajectory = [initial_coordinate]
+        self.movement_vector = [0, 0]
+        self.id = artifact_id
+        self.color = (random() * 255, random() * 255, random() * 255)
+        self.track_lost = 0
+
+    def update(self, new_coordinates):
+        """
+        Find the closest coordinate within max_range
+        """
+        closest_coordinate = None
+        min_distance = float('inf')
+        for coord in new_coordinates:
+            dist = self.distance(coord)
+            if dist < min_distance and dist <= self.max_range:
+                closest_coordinate = coord
+                min_distance = dist
+        if closest_coordinate is not None:
+            self.track_lost = 0
+            previous_coordinates = self.coordinates
+            self.coordinates = closest_coordinate
+            self.trajectory.append(closest_coordinate)
+            self.movement_vector = self.calculate_movement_vector(previous_coordinates)
+        else:
+            self.track_lost += 1
+
+    def calculate_movement_vector(self, previous_coordinates):
+        """
+        Calculate the movement vector from previous coordinates to new coordinates and normalize it.
+        """
+        return np.array(self.coordinates) - np.array(previous_coordinates)
+
+    def distance(self, coordinate):
+        """
+        Calculate the Euclidean distance between two coordinates.
+        """
+        return math.sqrt((coordinate[0] - self.coordinates[0]) ** 2 + (coordinate[1] - self.coordinates[1]) ** 2)
+
+
 class GuidewireTracking(QObject):
     status_guidewire_tracking_signal = Signal(str)
     status_move_slice_signal = Signal(str)
@@ -495,39 +555,15 @@ class GuidewireTracking(QObject):
         super().__init__()
         self.PUBLISH_PORT = None
         self.SUBSCRIBE_PORT = subscribe_port
-        self.previous_centroids = None
         self.move_slice = False
         self.MRI: Access.ParameterStandard = Access.ParameterStandard()
         self.voxel_size = None
         self.subscriber_socket = None
         self.publisher_socket = None
-        self.kf = None
-        self.init_kalman()
+        self.previous_positions = None
 
-    def init_kalman(self):
-        """
-        Kalman Filter stuff
-        """
-        self.kf = KalmanFilter(dim_x=4, dim_z=2)
-        self.kf.F = np.array([[1, 0, 1, 0],
-                              [0, 1, 0, 1],
-                              [0, 0, 1, 0],
-                              [0, 0, 0, 1]])  # state transition matrix
-        self.kf.H = np.array([[1, 0, 0, 0], [0, 1, 0, 0]])  # measurement function
-        self.kf.P *= 1000  # covariance matrix
-        self.kf.R = np.array([[10, 0], [0, 10]])  # measurement noise
-        self.kf.Q = block_diag(np.eye(2) * 0.01, np.eye(2) * 0.01)  # process noise
-
-    def kalman_predict(self):
-        self.kf.predict()
-
-    def kalman_update(self, z):
-        self.kf.update(z)
-
-    def get_kalman_state(self):
-        return self.kf.x[:2]
-
-    def find_artifact_centroids(self, image, gaussian_kernel: int = 9):
+    @staticmethod
+    def find_artifact_centroids(image, gaussian_kernel: int = 9):
         """
         Applies gaussian blur and thresholding to separate artifacts from noise.
         The center of gravity of each remaining blob is returned.
@@ -536,9 +572,8 @@ class GuidewireTracking(QObject):
         _, threshold = cv2.threshold(blurred, 200, 255, cv2.THRESH_BINARY)
         contours, _ = cv2.findContours(threshold, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         threshold = cv2.cvtColor(threshold, cv2.COLOR_GRAY2RGB)
-        centroids = None
+        centroids = []
         if len(contours) > 0:
-            centroids = []
             for contour in contours:
                 M = cv2.moments(contour)
                 if M["m00"] != 0:
@@ -546,44 +581,12 @@ class GuidewireTracking(QObject):
                     cY = int(M["m01"] / M["m00"])
                     centroids.append((cX, cY))
                     cv2.circle(threshold, (cX, cY), 3, (0, 255, 0), -1)
-        return centroids, blurred, threshold
+        return centroids, threshold
 
     def convert_px_to_mm(self, px, metadata):
         if self.voxel_size is None:
             self.voxel_size = metadata.value.image.dimensions.voxelSize.column
         return self.voxel_size * px
-
-    def get_guidewire_movement_vector_kalman(self, prediction_image):
-        current_centroids, blurred, threshold = self.find_artifact_centroids(prediction_image)
-        if self.previous_centroids is not None and current_centroids is not None:
-            if len(current_centroids) == 0:
-                return None, current_centroids, blurred, threshold
-            predicted_centroids = []
-            for centroid in current_centroids:
-                if self.kf.x is None:  # Initialize filter state
-                    self.kf.x[:2] = centroid
-                self.kalman_predict()  # Predict next state
-                self.kalman_update(centroid)  # Update with new measurement
-                predicted_centroid = self.get_kalman_state()[:2]  # Get predicted centroid
-                predicted_centroids.append(predicted_centroid)
-            # Calculate average movement vector
-            predicted_centroids = np.array(predicted_centroids)
-            predicted_avg_position = np.mean(predicted_centroids, axis=0)
-            movement_vector = predicted_avg_position - self.previous_centroids[0]
-            for centroid in predicted_centroids:
-                cv2.circle(threshold, tuple(centroid.astype(int)), 4, (0, 0, 255), -1)
-            return movement_vector, current_centroids, blurred, threshold
-        return None, current_centroids, blurred, threshold
-
-    def get_guidewire_movement_vector_average(self, prediction_image):
-        current_centroids, blurred, threshold = self.find_artifact_centroids(prediction_image)
-        if self.previous_centroids is not None and current_centroids is not None:
-            current_avg_position = np.mean(current_centroids, axis=0)
-            previous_avg_position = np.mean(self.previous_centroids, axis=0)
-            movement_vector = current_avg_position - previous_avg_position
-            cv2.circle(threshold, tuple(current_avg_position.astype(int)), 4, (0, 0, 255), -1)
-            return movement_vector, current_centroids, blurred, threshold
-        return None, current_centroids, blurred, threshold
 
     def start(self, movement_threshold_mm=2):
         context = zmq.Context()
@@ -593,24 +596,38 @@ class GuidewireTracking(QObject):
         self.subscriber_socket.subscribe("")
         self.publisher_socket = context.socket(zmq.PUB)
         self.PUBLISH_PORT = self.publisher_socket.bind_to_random_port("tcp://127.0.0.1")
+        tracker_id = 0
+        trackers = []
         while window.ui.check_guidewire_tracking_active.isChecked():
             data = self.subscriber_socket.recv()
             prediction: ImageData = pickle.loads(data)
-            forward_z = 0
-            side_to_side_x = 0
             if prediction.image is None:
                 continue
-            movement_vector, current_centroids, blurred, threshold = self.get_guidewire_movement_vector_kalman(
-                prediction.image)
-            self.previous_centroids = current_centroids
-            if movement_vector is not None:
-                forward_z = int(self.convert_px_to_mm(px=movement_vector[0], metadata=prediction.metadata))
-                side_to_side_x = int(self.convert_px_to_mm(px=movement_vector[1], metadata=prediction.metadata) * (-1))
-                self.status_guidewire_tracking_signal.emit(f"Z: {forward_z}mm, X: {side_to_side_x}mm")
-            output = ImageData(image_data=threshold.astype(np.uint8), metadata=prediction.metadata)
+            centroids, threshold = self.find_artifact_centroids(prediction.image)
+            for tracker in trackers:
+                tracker.update(centroids)
+                if tracker.coordinates in centroids:
+                    centroids.remove(tracker.coordinates)
+                # Erase tracker if it has lost marker for more than 5 frames
+                trackers = [tracker for tracker in trackers if tracker.track_lost <= 5]
+            if len(centroids) > 0:
+                for centroid in centroids:
+                    trackers.append(ArtifactTracker(centroid, tracker_id))
+                    tracker_id += 1
+            average_movement = []
+            for tracker in trackers:
+                for coordinate in tracker.trajectory:
+                    cv2.circle(threshold, coordinate, 2, color=tracker.color, thickness=-1)
+                average_movement.append(tracker.movement_vector)
+            if average_movement:
+                average_movement = np.mean(average_movement, axis=0)
+                self.status_guidewire_tracking_signal.emit(
+                    f"({len(trackers)}) Move: {average_movement[0]} | {average_movement[1]}")
+            else:
+                self.status_guidewire_tracking_signal.emit("No guidewire detected.")
+
+            output = ImageData(image_data=threshold, metadata=prediction.metadata)
             self.publisher_socket.send(pickle.dumps(output))
-            if self.move_slice and (abs(forward_z) + abs(side_to_side_x)) > movement_threshold_mm:
-                self.move_slice_to_target(forward_z, side_to_side_x)
 
     def move_slice_to_target(self, forward_z, side_to_side_x):
         current_location = self.MRI.get_slice_position_dcs().value
@@ -633,8 +650,7 @@ class GuidewireTracking(QObject):
             diff_y = abs(new_location.y - target_location[1]) < allowed_difference
             diff_z = abs(new_location.z - target_location[2]) < allowed_difference
             if all([diff_x, diff_y, diff_z]):
-                self.previous_centroids = None
-                self.init_kalman()
+                self.previous_positions = None
                 break
 
 

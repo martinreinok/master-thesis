@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'master-thesis-uiCuhLzI.ui'
+## Form generated from reading UI file 'master-thesis-uiUVtYqY.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.6.0
 ##
@@ -103,6 +103,7 @@ class Ui_MainWindow(object):
         self.button_register = QPushButton(self.connect)
         self.button_register.setObjectName(u"button_register")
         self.button_register.setMinimumSize(QSize(0, 40))
+        self.button_register.setAutoDefault(True)
 
         self.formLayout_3.setWidget(3, QFormLayout.FieldRole, self.button_register)
 
@@ -127,6 +128,7 @@ class Ui_MainWindow(object):
         self.button_request_control.setObjectName(u"button_request_control")
         self.button_request_control.setEnabled(False)
         self.button_request_control.setMinimumSize(QSize(0, 40))
+        self.button_request_control.setAutoDefault(True)
 
         self.formLayout_3.setWidget(5, QFormLayout.FieldRole, self.button_request_control)
 
@@ -341,6 +343,7 @@ class Ui_MainWindow(object):
         self.button_set_parameter.setObjectName(u"button_set_parameter")
         self.button_set_parameter.setEnabled(False)
         self.button_set_parameter.setMinimumSize(QSize(0, 40))
+        self.button_set_parameter.setAutoDefault(True)
 
         self.formLayout_2.setWidget(9, QFormLayout.FieldRole, self.button_set_parameter)
 
@@ -645,6 +648,7 @@ class Ui_MainWindow(object):
         self.retranslateUi(MainWindow)
 
         self.Accessi_stuff.setCurrentIndex(0)
+        self.button_set_parameter.setDefault(True)
 
 
         QMetaObject.connectSlotsByName(MainWindow)
