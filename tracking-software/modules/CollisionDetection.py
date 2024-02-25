@@ -1,0 +1,2 @@
+class CollisionDetection:
+    pass

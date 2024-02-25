@@ -14,6 +14,7 @@ import asyncio
 
 from types import SimpleNamespace
 from typing import Literal
+import numpy as np
 import websockets
 import requests
 import urllib3
@@ -463,6 +464,40 @@ class ParameterStandard:
         return send_request(url, data, "POST")
 
     @staticmethod
+    def set_slice_orientation_degrees(x_deg, y_deg, z_deg, allow_side_effects=True, index=0):
+        """
+        Response example:
+         - "result":{"success":true,"reason":"ok","time":"20170608T143325.423"},
+         - "normalSet":{"x":0,"y":0,"z":-1.0},
+         - "phaseSet":{"x":0,"y":-1.0,"z":0},
+         - "readSet":{"x":-1.0,"y":0,"z":0}
+         Don't really understand how the math works
+        """
+        # Convert degrees to radians
+        x_rad = np.radians(x_deg)
+        y_rad = np.radians(y_deg)
+        z_rad = np.radians(z_deg)
+
+        # Calculate the rotation matrices around each axis
+        Rx = np.array([[1, 0, 0], [0, np.cos(x_rad), -np.sin(x_rad)], [0, np.sin(x_rad), np.cos(x_rad)]])
+        Ry = np.array([[np.cos(y_rad), 0, np.sin(y_rad)], [0, 1, 0], [-np.sin(y_rad), 0, np.cos(y_rad)]])
+        Rz = np.array([[np.cos(z_rad), -np.sin(z_rad), 0], [np.sin(z_rad), np.cos(z_rad), 0], [0, 0, 1]])
+
+        # Combine the rotation matrices to get the overall rotation matrix
+        R = np.dot(Rz, np.dot(Ry, Rx))
+
+        # Extract the orientation vectors (normal, phase, read) from the rotation matrix
+        normal = R[:, 2]  # Third column
+        phase = R[:, 1]  # Second column
+        read = R[:, 0]  # First column
+
+        # Normalize the vectors
+        normal /= np.linalg.norm(normal)
+        phase /= np.linalg.norm(phase)
+        read /= np.linalg.norm(read)
+        return ParameterStandard.set_slice_orientation_dcs(normal, phase, read, allow_side_effects, index)
+
+    @staticmethod
     def get_slice_thickness():
         """
         Unit:mm
@@ -471,6 +506,18 @@ class ParameterStandard:
          - "value":2.5
         """
         url = f"{config.base_url()}/parameter/standard/getSliceThickness"
+        data = {"sessionId": config.session_id}
+        return send_request(url, data, "GET")
+
+    @staticmethod
+    def get_field_of_view_read():
+        """
+        Unit:mm
+        Response example:
+         - "result":{"success":true,"reason":"ok","time":"20170608T143325.423"},
+         - "value": 400.0
+        """
+        url = f"{config.base_url()}/parameter/standard/getFieldOfViewRead"
         data = {"sessionId": config.session_id}
         return send_request(url, data, "GET")
 
@@ -690,7 +737,6 @@ def handle_websocket_message(data):
 async def connect_websocket():
     """
     Connects to the websocket server and returns the connected websocket object.
-
     Returns websockets.legacy.client.Connect object
     """
     try:

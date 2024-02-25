@@ -13,7 +13,7 @@ class AccessiClient:
         self.template_id = None
         self.registered = False
 
-    def register(self):
+    def register(self, set_status_labels=True):
         ip_address = self.ui.field_ip_address.text()
         client_name = self.ui.field_client_name.text()
         version = self.ui.field_version.text()
@@ -27,22 +27,26 @@ class AccessiClient:
                                                          hash="uTwo2ohlQvMNHhfrzceCRzfRSLYDAw7zqojGjlP%2BCEmqPq1IxUoyx5hOGYbiO%2FEIyiaA4oFHFB2fwTctDbRWew%3D%3D",
                                                          informal_name=client_name)
             except Exception as error:
-                self.ui.status_register.setStyleSheet("color: red")
-                self.ui.status_register.setText(str(error))
+                if set_status_labels:
+                    self.ui.status_register.setStyleSheet("color: red")
+                    self.ui.status_register.setText(str(error))
                 return
-            if reg.result.success:
-                self.ui.status_register.setStyleSheet("color: green")
-                self.ui.status_register.setText(f"{reg.result.success}, privilege: {reg.privilegeLevel}")
-                self.ui.button_request_control.setEnabled(True)
-                self.ui.button_get_templates.setEnabled(True)
-                self.ui.button_get_parameter.setEnabled(True)
-                self.ui.button_set_parameter.setEnabled(True)
-                self.ui.check_websocket_active.setEnabled(True)
-                self.ui.check_websocket_active.stateChanged.emit(self.ui.check_websocket_active.isChecked())
-                self.registered = True
+            if set_status_labels:
+                if reg.result.success:
+                    self.ui.status_register.setStyleSheet("color: green")
+                    self.ui.status_register.setText(f"{reg.result.success}, privilege: {reg.privilegeLevel}")
+                    self.ui.button_request_control.setEnabled(True)
+                    self.ui.button_get_templates.setEnabled(True)
+                    self.ui.button_get_parameter.setEnabled(True)
+                    self.ui.button_set_parameter.setEnabled(True)
+                    self.ui.check_websocket_active.setEnabled(True)
+                    self.ui.check_websocket_active.stateChanged.emit(self.ui.check_websocket_active.isChecked())
+                    self.registered = True
+                else:
+                    self.ui.status_register.setStyleSheet("color: red")
+                    self.ui.status_register.setText(f"{reg.result.success}, reason: {reg.result.reason}")
             else:
-                self.ui.status_register.setStyleSheet("color: red")
-                self.ui.status_register.setText(f"{reg.result.success}, reason: {reg.result.reason}")
+                return reg
 
     def request_control(self):
         status = self.Access.HostControl.get_state()
@@ -54,11 +58,10 @@ class AccessiClient:
                 self.ui.button_release_control.setEnabled(True)
             else:
                 self.ui.status_request_control.setStyleSheet("color: red")
-                self.ui.status_request_control.setText(f"{control.reason}")
+                self.ui.status_request_control.setText(f"{control}")
         else:
             self.ui.status_request_control.setStyleSheet("color: red")
-            self.ui.status_request_control.setText(f"{status.value.cannotRequestControlReason}")
-        self.Access.HostControl.request_host_control()
+            self.ui.status_request_control.setText(f"{status}")
 
     def release_control(self):
         status = self.Access.HostControl.get_state()
@@ -69,7 +72,7 @@ class AccessiClient:
                 self.ui.status_release_control.setText(f"{control.result.success}")
             else:
                 self.ui.status_release_control.setStyleSheet("color: red")
-                self.ui.status_release_control.setText(f"{control.reason}")
+                self.ui.status_release_control.setText(f"{control}")
 
     def get_templates(self):
         templates = self.Access.TemplateExecution.get_templates()
@@ -94,7 +97,7 @@ class AccessiClient:
                 self.ui.button_stop_template.setEnabled(True)
             else:
                 self.ui.status_open_template.setStyleSheet("color: red")
-                self.ui.status_open_template.setText(f"{open_template.result.reason}")
+                self.ui.status_open_template.setText(f"{open_template}")
 
     def start_template(self):
         if self.template_id:
@@ -105,7 +108,7 @@ class AccessiClient:
                     self.ui.status_start_stop_template.setText(f"Start: {start.result.success}")
                 else:
                     self.ui.status_start_stop_template.setStyleSheet("color: red")
-                    self.ui.status_start_stop_template.setText(f"Start: {start.result.reason}")
+                    self.ui.status_start_stop_template.setText(f"Start: {start}")
             except Exception as err:
                 self.ui.status_start_stop_template.setStyleSheet("color: red")
                 self.ui.status_start_stop_template.setText(f"Error: {err}")
@@ -118,7 +121,7 @@ class AccessiClient:
                 self.ui.status_start_stop_template.setText(f"Stop: {stop.result.success}")
             else:
                 self.ui.status_start_stop_template.setStyleSheet("color: red")
-                self.ui.status_start_stop_template.setText(f"Stop: {stop.result.reason}")
+                self.ui.status_start_stop_template.setText(f"Stop: {stop}")
         self.Access.TemplateModification.close()
 
     def get_parameter(self):

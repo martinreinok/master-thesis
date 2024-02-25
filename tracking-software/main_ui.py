@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'master-thesis-uiUVtYqY.ui'
+## Form generated from reading UI file 'master-thesis-uiuKjprC.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.6.0
 ##
@@ -19,9 +19,9 @@ from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
 from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComboBox,
     QFormLayout, QFrame, QGridLayout, QHBoxLayout,
     QHeaderView, QLabel, QLineEdit, QMainWindow,
-    QMenuBar, QPushButton, QSizePolicy, QSpacerItem,
-    QStatusBar, QTabWidget, QTableWidget, QTableWidgetItem,
-    QVBoxLayout, QWidget)
+    QMenu, QMenuBar, QPushButton, QSizePolicy,
+    QSpacerItem, QStatusBar, QTabWidget, QTableWidget,
+    QTableWidgetItem, QVBoxLayout, QWidget)
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -41,6 +41,8 @@ class Ui_MainWindow(object):
         self.actionGuidewire_Tracking.setObjectName(u"actionGuidewire_Tracking")
         self.actionGuidewire_Tracking.setCheckable(True)
         self.actionGuidewire_Tracking.setChecked(True)
+        self.actionOpen_3D_Scan_Suite = QAction(MainWindow)
+        self.actionOpen_3D_Scan_Suite.setObjectName(u"actionOpen_3D_Scan_Suite")
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.gridLayout = QGridLayout(self.centralwidget)
@@ -640,10 +642,15 @@ class Ui_MainWindow(object):
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
         self.menubar.setGeometry(QRect(0, 0, 776, 22))
+        self.menu3D_Suite = QMenu(self.menubar)
+        self.menu3D_Suite.setObjectName(u"menu3D_Suite")
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QStatusBar(MainWindow)
         self.statusbar.setObjectName(u"statusbar")
         MainWindow.setStatusBar(self.statusbar)
+
+        self.menubar.addAction(self.menu3D_Suite.menuAction())
+        self.menu3D_Suite.addAction(self.actionOpen_3D_Scan_Suite)
 
         self.retranslateUi(MainWindow)
 
@@ -659,6 +666,7 @@ class Ui_MainWindow(object):
         self.actionImages.setText(QCoreApplication.translate("MainWindow", u"Images", None))
         self.actionAccess_i_Client.setText(QCoreApplication.translate("MainWindow", u"Access-i Client", None))
         self.actionGuidewire_Tracking.setText(QCoreApplication.translate("MainWindow", u"Guidewire Tracking", None))
+        self.actionOpen_3D_Scan_Suite.setText(QCoreApplication.translate("MainWindow", u"Open 3D Scan Suite", None))
         self.label.setText(QCoreApplication.translate("MainWindow", u"Access-i Client", None))
         self.label_2.setText(QCoreApplication.translate("MainWindow", u"IP Address", None))
         self.field_ip_address.setText(QCoreApplication.translate("MainWindow", u"127.0.0.1", None))
@@ -730,5 +738,6 @@ class Ui_MainWindow(object):
         self.check_cathbot_collision_feedback.setText(QCoreApplication.translate("MainWindow", u"CathBot Feedback", None))
         self.status_cathbot_feedback.setText("")
         self.check_collision_save.setText(QCoreApplication.translate("MainWindow", u"Save Collision Detection Images", None))
+        self.menu3D_Suite.setTitle(QCoreApplication.translate("MainWindow", u"ScanSuite", None))
     # retranslateUi
 

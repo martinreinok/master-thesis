@@ -1,7 +1,7 @@
 import sys; sys.path.append("./modules")
 from typing import Literal
 from threading import Thread
-from QtUI import Ui_MainWindow
+from main_ui import Ui_MainWindow
 import modules.accessi_local as Access
 from PySide6.QtWidgets import QApplication, QMainWindow, QFileDialog
 from modules.AccessiWebsocket import AccessiWebsocket
@@ -9,17 +9,27 @@ from modules.AccessiClient import AccessiClient
 from modules.CNNModel import CNNModel
 from modules.GuidewireTracking import GuidewireTracking
 from modules.VideoViewer import VideoViewer
+from scan_suite import ScanSuiteWindow as ScanSuite
 
-DEVICE: Literal["cuda", "cpu"] = "cuda"
+DEVICE: Literal["cuda", "cpu"] = "cpu"
 
 
 class MyMainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.scan_suite = None
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.ui.table_templates.setColumnCount(3)
         self.output_path = None
+
+        """
+        Defaults
+        """
+        self.ui.field_ip_address.setText("127.0.0.1")
+        self.ui.field_version.setText("v2")
+        self.ui.field_client_name.setText("Martin Reinok Python Client")
+        self.ui.field_output_directory.setText("C:/Users/C/Desktop/Master Thesis/LOG_IMAGES")
 
         """
         Threads
@@ -40,7 +50,7 @@ class MyMainWindow(QMainWindow):
         """
         Buttons
         """
-        self.ui.button_register.clicked.connect(self.access_client.register)
+        self.ui.button_register.clicked.connect(lambda: self.access_client.register(True))
         self.ui.button_request_control.clicked.connect(self.access_client.request_control)
         self.ui.button_release_control.clicked.connect(self.access_client.release_control)
         self.ui.button_get_templates.clicked.connect(self.access_client.get_templates)
@@ -51,6 +61,7 @@ class MyMainWindow(QMainWindow):
         self.ui.button_set_parameter.clicked.connect(self.access_client.set_parameter)
         self.ui.button_select_output_dir.clicked.connect(self.select_output_directory)
         self.ui.field_parameter_value.returnPressed.connect(self.access_client.set_parameter)
+        self.ui.actionOpen_3D_Scan_Suite.triggered.connect(self.open_scan_suite)
 
         """
         Checkboxes
@@ -95,6 +106,12 @@ class MyMainWindow(QMainWindow):
             # Checkboxes are toggled in the thread due to long imports.
         else:
             self.cnn_thread = None
+
+    def open_scan_suite(self):
+        self.scan_suite = ScanSuite(accessi_ip_address=self.ui.field_ip_address.text(),
+                                    accessi_version=self.ui.field_version.text(),
+                                    accessi_client_name="ScanSuite", SUBSCRIBE_PORT=self.accessi_websocket.PUBLISH_PORT)
+        self.scan_suite.show()
 
     def set_tracking_active(self):
         if self.ui.check_guidewire_tracking_active.isChecked():
@@ -153,6 +170,8 @@ class MyMainWindow(QMainWindow):
                 self.access_client.Access.Authorization.deregister()
         except:
             pass
+        if self.scan_suite is not None:
+            self.scan_suite.close()
         QMainWindow.closeEvent(self, event)
 
     def select_output_directory(self):
