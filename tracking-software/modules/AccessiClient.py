@@ -1,8 +1,5 @@
-"""
-
-"""
-import accessi_local as Access
 from PySide6.QtWidgets import QTableWidgetItem
+import accessi_local as Access
 
 
 class AccessiClient:
@@ -13,10 +10,13 @@ class AccessiClient:
         self.template_id = None
         self.registered = False
 
-    def register(self, set_status_labels=True):
+    def register(self):
         ip_address = self.ui.field_ip_address.text()
         client_name = self.ui.field_client_name.text()
         version = self.ui.field_version.text()
+        self.ui.status_register.setText("")
+        self.ui.status_request_control.setText("")
+        self.ui.status_release_control.setText("")
         if all(field is not None for field in [ip_address, client_name, version]):
             self.Access.config.ip_address = self.ui.field_ip_address.text()
             self.Access.config.version = version
@@ -27,28 +27,26 @@ class AccessiClient:
                                                          hash="uTwo2ohlQvMNHhfrzceCRzfRSLYDAw7zqojGjlP%2BCEmqPq1IxUoyx5hOGYbiO%2FEIyiaA4oFHFB2fwTctDbRWew%3D%3D",
                                                          informal_name=client_name)
             except Exception as error:
-                if set_status_labels:
-                    self.ui.status_register.setStyleSheet("color: red")
-                    self.ui.status_register.setText(str(error))
+                self.ui.status_register.setStyleSheet("color: red")
+                self.ui.status_register.setText(str(error))
                 return
-            if set_status_labels:
-                if reg.result.success:
-                    self.ui.status_register.setStyleSheet("color: green")
-                    self.ui.status_register.setText(f"{reg.result.success}, privilege: {reg.privilegeLevel}")
-                    self.ui.button_request_control.setEnabled(True)
-                    self.ui.button_get_templates.setEnabled(True)
-                    self.ui.button_get_parameter.setEnabled(True)
-                    self.ui.button_set_parameter.setEnabled(True)
-                    self.ui.check_websocket_active.setEnabled(True)
-                    self.ui.check_websocket_active.stateChanged.emit(self.ui.check_websocket_active.isChecked())
-                    self.registered = True
-                else:
-                    self.ui.status_register.setStyleSheet("color: red")
-                    self.ui.status_register.setText(f"{reg.result.success}, reason: {reg.result.reason}")
+            if reg.result.success:
+                self.ui.status_register.setStyleSheet("color: green")
+                self.ui.status_register.setText(f"{reg.result.success}, privilege: {reg.privilegeLevel}")
+                self.ui.button_request_control.setEnabled(True)
+                self.ui.button_get_templates.setEnabled(True)
+                self.ui.button_get_parameter.setEnabled(True)
+                self.ui.button_set_parameter.setEnabled(True)
+                self.ui.check_websocket_active.setEnabled(True)
+                self.ui.check_websocket_active.stateChanged.emit(self.ui.check_websocket_active.isChecked())
+                self.registered = True
             else:
-                return reg
+                self.ui.status_register.setStyleSheet("color: red")
+                self.ui.status_register.setText(f"{reg.result.success}, reason: {reg.result.reason}")
 
     def request_control(self):
+        self.ui.status_request_control.setText("")
+        self.ui.status_release_control.setText("")
         status = self.Access.HostControl.get_state()
         if status.result.success and status.value.canRequestControl:
             control = self.Access.HostControl.request_host_control()
@@ -64,6 +62,8 @@ class AccessiClient:
             self.ui.status_request_control.setText(f"{status}")
 
     def release_control(self):
+        self.ui.status_request_control.setText("")
+        self.ui.status_release_control.setText("")
         status = self.Access.HostControl.get_state()
         if status.result.success and status.value.canReleaseControl:
             control = self.Access.HostControl.release_host_control()

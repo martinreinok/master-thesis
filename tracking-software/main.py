@@ -3,15 +3,15 @@ from typing import Literal
 from threading import Thread
 from main_ui import Ui_MainWindow
 import modules.accessi_local as Access
-from PySide6.QtWidgets import QApplication, QMainWindow, QFileDialog
+from PySide6.QtWidgets import QApplication, QMainWindow, QFileDialog, QTableWidgetItem
 from modules.AccessiWebsocket import AccessiWebsocket
-from modules.AccessiClient import AccessiClient
 from modules.CNNModel import CNNModel
 from modules.GuidewireTracking import GuidewireTracking
 from modules.VideoViewer import VideoViewer
+from modules.AccessiClient import AccessiClient
 from scan_suite import ScanSuiteWindow as ScanSuite
 
-DEVICE: Literal["cuda", "cpu"] = "cpu"
+DEVICE: Literal["cuda", "cpu"] = "cuda"
 
 
 class MyMainWindow(QMainWindow):
@@ -25,6 +25,16 @@ class MyMainWindow(QMainWindow):
 
         """
         Defaults
+        
+        Live Server info:
+        (optional) route add 10.89.184.0 mask 255.255.255.0 192.168.182.1 -p
+        Access-i IP: 10.89.184.9
+        Version: v1
+        
+        Client IP: 192.168.182.20
+        Subnet: 255.255.255.0
+        Gateway: 192.168.182.0
+        DNS1: 192.168.182.1
         """
         self.ui.field_ip_address.setText("127.0.0.1")
         self.ui.field_version.setText("v2")
@@ -42,7 +52,8 @@ class MyMainWindow(QMainWindow):
         Modules
         """
         self.access_client: AccessiClient = AccessiClient(self.ui)
-        self.accessi_websocket: AccessiWebsocket = AccessiWebsocket(window=self, Access=self.access_client.Access)
+        self.accessi_websocket: AccessiWebsocket = AccessiWebsocket(access_instance=self.access_client.Access,
+                                                                    window=self)
         self.cnn: CNNModel = CNNModel(window=self, subscribe_port=None)
         self.tracking: GuidewireTracking = GuidewireTracking(window=self, subscribe_port=None)
         self.accessi_websocket.status_websocket_signal.connect(self.update_websocket_status)
@@ -50,7 +61,7 @@ class MyMainWindow(QMainWindow):
         """
         Buttons
         """
-        self.ui.button_register.clicked.connect(lambda: self.access_client.register(True))
+        self.ui.button_register.clicked.connect(self.access_client.register)
         self.ui.button_request_control.clicked.connect(self.access_client.request_control)
         self.ui.button_release_control.clicked.connect(self.access_client.release_control)
         self.ui.button_get_templates.clicked.connect(self.access_client.get_templates)
@@ -110,7 +121,7 @@ class MyMainWindow(QMainWindow):
     def open_scan_suite(self):
         self.scan_suite = ScanSuite(accessi_ip_address=self.ui.field_ip_address.text(),
                                     accessi_version=self.ui.field_version.text(),
-                                    accessi_client_name="ScanSuite", SUBSCRIBE_PORT=self.accessi_websocket.PUBLISH_PORT)
+                                    SUBSCRIBE_PORT=self.accessi_websocket.PUBLISH_PORT)
         self.scan_suite.show()
 
     def set_tracking_active(self):
@@ -177,10 +188,6 @@ class MyMainWindow(QMainWindow):
     def select_output_directory(self):
         directory = select_directory()
         self.ui.field_output_directory.setText(directory)
-
-
-class CollisionDetection:
-    pass
 
 
 def select_directory():

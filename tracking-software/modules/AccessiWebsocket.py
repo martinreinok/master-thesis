@@ -13,13 +13,14 @@ from shared_methods import convert_websocket_data_to_image, calculate_latency
 class AccessiWebsocket(QObject):
     status_websocket_signal = Signal(str)
 
-    def __init__(self, Access: Access, window):
+    def __init__(self, access_instance, window):
         super().__init__()
         self.PUBLISH_PORT = None
-        self.Access = Access
+        self.Access: Access = access_instance
         self.window = window
 
     async def get_websocket_data(self, connected_event: asyncio.Event):
+        print(self.Access)
         async with await Access.connect_websocket() as websocket:
             connected_event.set()
             context = zmq.Context()
