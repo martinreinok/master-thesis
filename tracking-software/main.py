@@ -13,6 +13,27 @@ from scan_suite import ScanSuiteWindow as ScanSuite
 
 DEVICE: Literal["cuda", "cpu"] = "cuda"
 
+"""
+Live Server info:
+(optional) route add 192.168.182.0 mask 255.255.255.0 192.168.182.1 if 26 -p
+Access-i IP: 10.89.184.9
+Version: v1
+
+Access-i simulator info:
+Access-i IP: 127.0.0.1
+Version: v2
+
+Client IP: 192.168.182.20
+Subnet: 255.255.255.0
+Gateway: 192.168.182.0
+DNS1: 192.168.182.1
+"""
+IP_ADDRESS_DEFAULT = "127.0.0.1"
+VERSION_DEFAULT = "v2"
+CLIENT_NAME_DEFAULT = "Martin Reinok Python Client"
+OUTPUT_DIRECTORY_DEFAULT = "C:/Users/C/Desktop/Master Thesis/LOG_IMAGES"
+CNN_MODEL_DEFAULT = "MODEL_512_V2"
+
 
 class MyMainWindow(QMainWindow):
     def __init__(self):
@@ -25,21 +46,11 @@ class MyMainWindow(QMainWindow):
 
         """
         Defaults
-        
-        Live Server info:
-        (optional) route add 10.89.184.0 mask 255.255.255.0 192.168.182.1 -p
-        Access-i IP: 10.89.184.9
-        Version: v1
-        
-        Client IP: 192.168.182.20
-        Subnet: 255.255.255.0
-        Gateway: 192.168.182.0
-        DNS1: 192.168.182.1
         """
-        self.ui.field_ip_address.setText("127.0.0.1")
-        self.ui.field_version.setText("v2")
-        self.ui.field_client_name.setText("Martin Reinok Python Client")
-        self.ui.field_output_directory.setText("C:/Users/C/Desktop/Master Thesis/LOG_IMAGES")
+        self.ui.field_ip_address.setText(IP_ADDRESS_DEFAULT)
+        self.ui.field_version.setText(VERSION_DEFAULT)
+        self.ui.field_client_name.setText(CLIENT_NAME_DEFAULT)
+        self.ui.field_output_directory.setText(OUTPUT_DIRECTORY_DEFAULT)
 
         """
         Threads
@@ -54,7 +65,7 @@ class MyMainWindow(QMainWindow):
         self.access_client: AccessiClient = AccessiClient(self.ui)
         self.accessi_websocket: AccessiWebsocket = AccessiWebsocket(access_instance=self.access_client.Access,
                                                                     window=self)
-        self.cnn: CNNModel = CNNModel(window=self, subscribe_port=None)
+        self.cnn: CNNModel = CNNModel(window=self, subscribe_port=None, cnn_model=CNN_MODEL_DEFAULT)
         self.tracking: GuidewireTracking = GuidewireTracking(window=self, subscribe_port=None)
         self.accessi_websocket.status_websocket_signal.connect(self.update_websocket_status)
 
