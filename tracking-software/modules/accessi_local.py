@@ -2,7 +2,6 @@
 This is a library written for Siemens Access-i websocket requests.
 Only insecure HTTPS is currently supported.
 """
-import asyncio
 # TODO: TemplateSelection Service Not implemented.
 # TODO: Patient Service Not implemented.
 # TODO: Parameter Standard Service partially implemented.
@@ -18,6 +17,7 @@ import numpy as np
 import websockets
 import requests
 import urllib3
+import asyncio
 import json
 import ssl
 
@@ -429,7 +429,7 @@ class ParameterStandard:
                 "index": index,
                 "value": {"x": x, "y": y, "z": z},
                 "allowSideEffects": allow_side_effects}
-        return send_request(url, data)
+        return send_request(url, data, "POST")
 
     @staticmethod
     def get_slice_orientation_dcs():

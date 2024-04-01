@@ -19,22 +19,26 @@ class GuidewireTracking(QObject):
     def __init__(self, window, subscribe_port):
         super().__init__()
         self.PUBLISH_PORT = None
+        self.RAW_COORDINATE_PUBLISH_PORT = None
         self.SUBSCRIBE_PORT = subscribe_port
         self.move_slice = False
         self.MRI: Access.ParameterStandard = Access.ParameterStandard()
         self.voxel_size = None
         self.subscriber_socket = None
         self.publisher_socket = None
+        self.raw_coordinate_publisher_socket = None
         self.previous_positions = None
         self.window = window
+        self.trackers = []
 
     @staticmethod
-    def find_artifact_centroids(image, gaussian_kernel: int = 9):
+    def find_artifact_centroids(image, kernel: int = 7):
         """
         Applies gaussian blur and thresholding to separate artifacts from noise.
         The center of gravity of each remaining blob is returned.
         """
-        blurred = cv2.GaussianBlur(image, (gaussian_kernel, gaussian_kernel), 0)
+        blurred = cv2.medianBlur(image, kernel)
+        # blurred = cv2.GaussianBlur(image, (gaussian_kernel, kernel), 0)
         _, threshold = cv2.threshold(blurred, 200, 255, cv2.THRESH_BINARY)
         contours, _ = cv2.findContours(threshold, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         threshold = cv2.cvtColor(threshold, cv2.COLOR_GRAY2RGB)
@@ -46,7 +50,7 @@ class GuidewireTracking(QObject):
                     cX = int(M["m10"] / M["m00"])
                     cY = int(M["m01"] / M["m00"])
                     centroids.append((cX, cY))
-                    cv2.circle(threshold, (cX, cY), 3, (0, 255, 0), -1)
+                    # cv2.circle(threshold, (cX, cY), 3, (0, 255, 0), -1)
         return centroids, threshold
 
     def convert_px_to_mm(self, px, metadata):
@@ -61,52 +65,73 @@ class GuidewireTracking(QObject):
         self.subscriber_socket.connect("tcp://127.0.0.1:" + str(self.SUBSCRIBE_PORT))
         self.subscriber_socket.subscribe("")
         self.publisher_socket = context.socket(zmq.PUB)
+        self.raw_coordinate_publisher_socket = context.socket(zmq.PUB)
         self.PUBLISH_PORT = self.publisher_socket.bind_to_random_port("tcp://127.0.0.1")
+        self.RAW_COORDINATE_PUBLISH_PORT = self.raw_coordinate_publisher_socket.bind_to_random_port("tcp://127.0.0.1")
         tracker_id = 0
-        trackers = []
+        self.trackers = []
         while self.window.ui.check_guidewire_tracking_active.isChecked():
             data = self.subscriber_socket.recv()
             prediction: ImageData = pickle.loads(data)
             if prediction.image is None:
                 continue
             centroids, threshold = self.find_artifact_centroids(prediction.image)
-            for tracker in trackers:
+
+            # Send Centroids Data to socket.
+            centroids_mm = [[element * prediction.metadata.value.image.dimensions.voxelSize.column for element in sublist] for sublist in centroids]
+            self.raw_coordinate_publisher_socket.send(pickle.dumps(centroids_mm))
+            print(f"Send coordinates: {centroids_mm}")
+
+            for tracker in self.trackers:
                 tracker.update(centroids)
                 if tracker.coordinates in centroids:
                     centroids.remove(tracker.coordinates)
                 # Erase tracker if it has lost marker for more than 5 frames
-                trackers = [tracker for tracker in trackers if tracker.track_lost <= 5]
+                self.trackers = [tracker for tracker in self.trackers if tracker.track_lost <= 5]
             if len(centroids) > 0:
                 for centroid in centroids:
-                    trackers.append(ArtifactTracker(centroid, tracker_id))
+                    self.trackers.append(ArtifactTracker(centroid, tracker_id))
                     tracker_id += 1
             average_movement = []
-            for tracker in trackers:
-                unique_coordinates = set(tracker.trajectory)
-                for coordinate in unique_coordinates:
+            for tracker in self.trackers:
+                if len(tracker.trajectory) >= 2:
+                    initial_coordinate, current_coordinate = tracker.trajectory[0], tracker.trajectory[-1]
+                    cv2.circle(threshold, initial_coordinate, 4, color=tracker.color, thickness=-1)
+                    cv2.circle(threshold, current_coordinate, 4, color=tracker.color, thickness=-1)
+                for coordinate in set(tracker.trajectory):
                     cv2.circle(threshold, coordinate, 2, color=tracker.color, thickness=-1)
-                average_movement.append(tracker.movement_vector)
+                # Insignificant movements e.g. standing still is not considered.
+                if np.linalg.norm(np.array(tracker.movement_vector)) > 2:
+                    average_movement.append(tracker.movement_vector)
             if average_movement:
                 average_movement = np.mean(average_movement, axis=0)
                 self.status_guidewire_tracking_signal.emit(
-                    f"({len(trackers)}) Move: {average_movement[0]} | {average_movement[1]}")
+                    f"({len(self.trackers)}) Move: {average_movement[0]} | {average_movement[1]}")
+            elif not average_movement and len(self.trackers) > 0:
+                self.status_guidewire_tracking_signal.emit(f"({len(self.trackers)}) No movement detected")
             else:
                 self.status_guidewire_tracking_signal.emit("No guidewire detected.")
 
             output = ImageData(image_data=threshold, metadata=prediction.metadata)
             self.publisher_socket.send(pickle.dumps(output))
+            if len(average_movement) == 2:
+                movement_request = abs(average_movement[0]) + abs(average_movement[1])
+                if self.move_slice and movement_request > movement_threshold_mm:
+                    metadata = prediction.metadata
+                    self.move_slice_to_target(side_to_side_x=self.convert_px_to_mm(average_movement[0], metadata),
+                                              forward_z=self.convert_px_to_mm(average_movement[1], metadata))
 
-    def move_slice_to_target(self, forward_z, side_to_side_x):
+    def move_slice_to_target(self, side_to_side_x, forward_z):
         current_location = self.MRI.get_slice_position_dcs().value
-        target_location = [current_location.x + forward_z,
-                           current_location.y + side_to_side_x,
-                           current_location.z]
+        target_location = [current_location.x + side_to_side_x,
+                           current_location.y,
+                           current_location.z + forward_z]
         answer = self.MRI.set_slice_position_dcs(x=target_location[0], y=target_location[1],
                                                  z=target_location[2])
         self.status_move_slice_signal.emit(f"Move({forward_z},{side_to_side_x}): {answer.result.success}, "
                                            f"{answer.result.reason}, valueSet: {answer.valueSet}")
         """
-        Wait for changes to take effect
+        Wait for changes to take effect (this is not good)
         """
         allowed_difference = 3
         while True:
@@ -117,5 +142,5 @@ class GuidewireTracking(QObject):
             diff_y = abs(new_location.y - target_location[1]) < allowed_difference
             diff_z = abs(new_location.z - target_location[2]) < allowed_difference
             if all([diff_x, diff_y, diff_z]):
-                self.previous_positions = None
+                self.trackers = []
                 break

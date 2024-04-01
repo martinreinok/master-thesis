@@ -11,7 +11,28 @@ from modules.VideoViewer import VideoViewer
 from modules.AccessiClient import AccessiClient
 from scan_suite import ScanSuiteWindow as ScanSuite
 
+"""
+Live Server info:
+(optional) route add 192.168.182.0 mask 255.255.255.0 192.168.182.1 if 47 -p
+Access-i IP: 10.89.184.9
+Version: v1
+
+Access-i simulator info:
+Access-i IP: 127.0.0.1
+Version: v2
+
+Client IP: 192.168.182.20
+Subnet: 255.255.255.0
+Gateway: 192.168.182.1
+DNS1: 192.168.182.1
+"""
+
 DEVICE: Literal["cuda", "cpu"] = "cuda"
+IP_ADDRESS_DEFAULT = "127.0.0.1"
+VERSION_DEFAULT = "v2"
+CLIENT_NAME_DEFAULT = "Martin Reinok Python Client"
+OUTPUT_DIRECTORY_DEFAULT = "C:/Users/O/Desktop/Master Thesis/LOG_IMAGES/06.03.2024"
+CNN_MODEL_DEFAULT = "MODEL_512_V3"
 
 
 class MyMainWindow(QMainWindow):
@@ -25,21 +46,11 @@ class MyMainWindow(QMainWindow):
 
         """
         Defaults
-        
-        Live Server info:
-        (optional) route add 10.89.184.0 mask 255.255.255.0 192.168.182.1 -p
-        Access-i IP: 10.89.184.9
-        Version: v1
-        
-        Client IP: 192.168.182.20
-        Subnet: 255.255.255.0
-        Gateway: 192.168.182.0
-        DNS1: 192.168.182.1
         """
-        self.ui.field_ip_address.setText("127.0.0.1")
-        self.ui.field_version.setText("v2")
-        self.ui.field_client_name.setText("Martin Reinok Python Client")
-        self.ui.field_output_directory.setText("C:/Users/C/Desktop/Master Thesis/LOG_IMAGES")
+        self.ui.field_ip_address.setText(IP_ADDRESS_DEFAULT)
+        self.ui.field_version.setText(VERSION_DEFAULT)
+        self.ui.field_client_name.setText(CLIENT_NAME_DEFAULT)
+        self.ui.field_output_directory.setText(OUTPUT_DIRECTORY_DEFAULT)
 
         """
         Threads
@@ -54,7 +65,7 @@ class MyMainWindow(QMainWindow):
         self.access_client: AccessiClient = AccessiClient(self.ui)
         self.accessi_websocket: AccessiWebsocket = AccessiWebsocket(access_instance=self.access_client.Access,
                                                                     window=self)
-        self.cnn: CNNModel = CNNModel(window=self, subscribe_port=None)
+        self.cnn: CNNModel = CNNModel(window=self, subscribe_port=None, cnn_model=CNN_MODEL_DEFAULT)
         self.tracking: GuidewireTracking = GuidewireTracking(window=self, subscribe_port=None)
         self.accessi_websocket.status_websocket_signal.connect(self.update_websocket_status)
 
@@ -118,12 +129,6 @@ class MyMainWindow(QMainWindow):
         else:
             self.cnn_thread = None
 
-    def open_scan_suite(self):
-        self.scan_suite = ScanSuite(accessi_ip_address=self.ui.field_ip_address.text(),
-                                    accessi_version=self.ui.field_version.text(),
-                                    SUBSCRIBE_PORT=self.accessi_websocket.PUBLISH_PORT)
-        self.scan_suite.show()
-
     def set_tracking_active(self):
         if self.ui.check_guidewire_tracking_active.isChecked():
             self.tracking = GuidewireTracking(window=self, subscribe_port=self.cnn.PUBLISH_PORT)
@@ -136,6 +141,11 @@ class MyMainWindow(QMainWindow):
                 checkbox.stateChanged.emit(checkbox.isChecked())
         else:
             self.tracking_thread = None
+
+    def open_scan_suite(self):
+        self.scan_suite = ScanSuite(accessi_ip_address=self.ui.field_ip_address.text(),
+                                    accessi_version=self.ui.field_version.text(),
+                                    SUBSCRIBE_PORT=self.tracking.RAW_COORDINATE_PUBLISH_PORT)
 
     def show_websocket_output(self):
         if self.ui.check_websocket_output.isChecked():

@@ -13,6 +13,7 @@ class ArtifactTracker:
 
     def __init__(self, initial_coordinate, artifact_id, max_range=30):
         self.max_range = max_range
+        self.initial_coordinate = initial_coordinate
         self.coordinates = initial_coordinate
         self.trajectory = [initial_coordinate]
         self.movement_vector = [0, 0]
@@ -33,10 +34,9 @@ class ArtifactTracker:
                 min_distance = dist
         if closest_coordinate is not None:
             self.track_lost = 0
-            previous_coordinates = self.coordinates
             self.coordinates = closest_coordinate
             self.trajectory.append(closest_coordinate)
-            self.movement_vector = self.calculate_movement_vector(previous_coordinates)
+            self.movement_vector = self.calculate_movement_vector(self.initial_coordinate)
         else:
             self.track_lost += 1
 

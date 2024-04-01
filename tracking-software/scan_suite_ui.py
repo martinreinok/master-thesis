@@ -117,19 +117,19 @@ class Ui_ScanSuite(object):
 
         self.formLayout_4.setItem(5, QFormLayout.LabelRole, self.horizontalSpacer)
 
-        self.button_scan = QPushButton(self.frame_scanner)
-        self.button_scan.setObjectName(u"button_scan")
-        self.button_scan.setEnabled(False)
-        self.button_scan.setMinimumSize(QSize(0, 40))
+        self.button_load_model = QPushButton(self.frame_scanner)
+        self.button_load_model.setObjectName(u"button_load_model")
+        self.button_load_model.setEnabled(True)
+        self.button_load_model.setMinimumSize(QSize(0, 40))
 
-        self.formLayout_4.setWidget(5, QFormLayout.FieldRole, self.button_scan)
+        self.formLayout_4.setWidget(5, QFormLayout.FieldRole, self.button_load_model)
 
-        self.status_scan = QLabel(self.frame_scanner)
-        self.status_scan.setObjectName(u"status_scan")
-        self.status_scan.setWordWrap(True)
-        self.status_scan.setTextInteractionFlags(Qt.LinksAccessibleByKeyboard|Qt.LinksAccessibleByMouse|Qt.TextBrowserInteraction|Qt.TextSelectableByKeyboard|Qt.TextSelectableByMouse)
+        self.status_load_model = QLabel(self.frame_scanner)
+        self.status_load_model.setObjectName(u"status_load_model")
+        self.status_load_model.setWordWrap(True)
+        self.status_load_model.setTextInteractionFlags(Qt.LinksAccessibleByKeyboard|Qt.LinksAccessibleByMouse|Qt.TextBrowserInteraction|Qt.TextSelectableByKeyboard|Qt.TextSelectableByMouse)
 
-        self.formLayout_4.setWidget(6, QFormLayout.FieldRole, self.status_scan)
+        self.formLayout_4.setWidget(6, QFormLayout.FieldRole, self.status_load_model)
 
 
         self.verticalLayout.addWidget(self.frame_scanner)
@@ -223,15 +223,15 @@ class Ui_ScanSuite(object):
         ScanSuite.setWindowTitle(QCoreApplication.translate("ScanSuite", u"3D Suite", None))
         self.actionIP_Address.setText(QCoreApplication.translate("ScanSuite", u"IP Address", None))
         self.label_4.setText(QCoreApplication.translate("ScanSuite", u"Scan Settings", None))
-        self.label_8.setText(QCoreApplication.translate("ScanSuite", u"Scanning is only in Y axis", None))
+        self.label_8.setText(QCoreApplication.translate("ScanSuite", u"Scanning is not implemented.\nOnly 3D models can be loaded.", None))
         self.label.setText(QCoreApplication.translate("ScanSuite", u"Scan Start", None))
         self.field_scan_start_coordinates.setPlaceholderText(QCoreApplication.translate("ScanSuite", u"0,0,0 (x, y, z)", None))
         self.label_2.setText(QCoreApplication.translate("ScanSuite", u"Scan End", None))
         self.field_scan_end_coordinates.setPlaceholderText(QCoreApplication.translate("ScanSuite", u"0,0,0 (x, y, z)", None))
         self.label_3.setText(QCoreApplication.translate("ScanSuite", u"Images Amount", None))
         self.label_12.setText(QCoreApplication.translate("ScanSuite", u"Select Template", None))
-        self.button_scan.setText(QCoreApplication.translate("ScanSuite", u"Scan Model", None))
-        self.status_scan.setText("")
+        self.button_load_model.setText(QCoreApplication.translate("ScanSuite", u"Load 3D Scan", None))
+        self.status_load_model.setText("")
         self.label_10.setText(QCoreApplication.translate("ScanSuite", u"IP Address", None))
         self.field_ip_address.setText(QCoreApplication.translate("ScanSuite", u"127.0.0.1", None))
         self.label_9.setText(QCoreApplication.translate("ScanSuite", u"Client Name", None))

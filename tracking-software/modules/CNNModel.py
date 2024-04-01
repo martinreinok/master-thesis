@@ -14,11 +14,11 @@ from shared_methods import convert_websocket_data_to_image, calculate_latency
 class CNNModel(QObject):
     status_cnn_signal = Signal(str)
 
-    def __init__(self, window, subscribe_port):
+    def __init__(self, window, subscribe_port, cnn_model="MODEL_512"):
         super().__init__()
         self.PUBLISH_PORT = None
         self.SUBSCRIBE_PORT = subscribe_port
-        self.path_to_model_directory = "../MODELS/MODEL_512"
+        self.path_to_model_directory = f"../MODELS/{cnn_model}"
         self.checkpoint_name = "checkpoint_final.pth"
         self.folds = (4,)
         self.model = None
@@ -30,7 +30,7 @@ class CNNModel(QObject):
         """
         print(f"GPU: {torch.cuda.get_device_name(0)}")
         predictor = nnUNetPredictor(tile_step_size=1, use_gaussian=True, use_mirroring=True,
-                                    perform_everything_on_gpu=True, device=torch.device(DEVICE, 0),
+                                    perform_everything_on_device=True, device=torch.device(DEVICE, 0),
                                     verbose=False, verbose_preprocessing=False, allow_tqdm=False)
         predictor.initialize_from_trained_model_folder(path_to_model_directory, checkpoint_name=checkpoint_name,
                                                        use_folds=folds)
