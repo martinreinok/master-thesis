@@ -34,6 +34,27 @@ CLIENT_NAME_DEFAULT = "Martin Reinok Python Client"
 OUTPUT_DIRECTORY_DEFAULT = "C:/Users/O/Desktop/Master Thesis/LOG_IMAGES/06.03.2024"
 CNN_MODEL_DEFAULT = "MODEL_512_V3"
 
+"""
+Live Server info:
+(optional) route add 192.168.182.0 mask 255.255.255.0 192.168.182.1 if 26 -p
+Access-i IP: 10.89.184.9
+Version: v1
+
+Access-i simulator info:
+Access-i IP: 127.0.0.1
+Version: v2
+
+Client IP: 192.168.182.20
+Subnet: 255.255.255.0
+Gateway: 192.168.182.0
+DNS1: 192.168.182.1
+"""
+IP_ADDRESS_DEFAULT = "127.0.0.1"
+VERSION_DEFAULT = "v2"
+CLIENT_NAME_DEFAULT = "Martin Reinok Python Client"
+OUTPUT_DIRECTORY_DEFAULT = "C:/Users/C/Desktop/Master Thesis/LOG_IMAGES"
+CNN_MODEL_DEFAULT = "MODEL_512_V2"
+
 
 class MyMainWindow(QMainWindow):
     def __init__(self):
