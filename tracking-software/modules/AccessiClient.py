@@ -150,7 +150,7 @@ class AccessiClient:
             else:
                 answer = getattr(self.Access.ParameterStandard, parameter)(*val)
             if answer.result.success:
-                self.ui.status_set_parameter.setText(f"valueSet: {answer.valueSet}")
+                self.ui.status_set_parameter.setText(f"valueSet: {answer.valueSet}" if hasattr(answer, 'valueSet') else str(answer))
             else:
                 self.ui.status_set_parameter.setText(f"{answer.result.reason}")
         except Exception as err:

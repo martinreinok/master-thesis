@@ -1,4 +1,35 @@
-import sys; sys.path.append("./modules")
+"""
+The coding style of this entire program is questionable,
+but it works --.--
+
+The Qt UI file for main_ui.py is sadly lost, got erased accidentally.
+
+This program consists of multiple modules:
+- Access-i Client: Responsible for abstracting communication with Siemens MRI,
+    using my own library (pip install accessi). It should be used as kind-of singleton.
+
+- Access-i Websocket: Used only to receive images from MRI, uses accessi library.
+    This function is ran as a separate thread and images from MRI are sent to ZMQ port.
+
+- CNN Model: Responsible for running inference on images received from ZMQ (websocket).
+    This function is ran as a separate thread and output prediction is sent to ZMQ port.
+
+- Guidewire Tracking: Responsible for running tracking Guidewire which is detected using the CNN.
+    This function is ran as a separate thread and output is sent to ZMQ port.
+    This function also sends guidewire location data to ScanSuite, over ZMQ.
+
+- Collision Detection: Responsible for creating a haptic feedback loop to CathBot Master device.
+    This function is ran as a separate thread, the output is sent to a CAN bus using USB-CAN adapter.
+
+Some helper classes have been made, e.g. VideoViewer, ImageData and ArtifactTracker.
+
+ScanSuite is a standalone program, which can also be launched through the main UI.
+
+"""
+
+import sys
+sys.path.append("./modules")
+import multiprocessing
 from typing import Literal
 from threading import Thread
 from main_ui import Ui_MainWindow
@@ -9,7 +40,7 @@ from modules.CNNModel import CNNModel
 from modules.GuidewireTracking import GuidewireTracking
 from modules.VideoViewer import VideoViewer
 from modules.AccessiClient import AccessiClient
-from scan_suite import ScanSuiteWindow as ScanSuite
+from scan_suite import ScanSuiteWindow
 
 """
 Live Server info:
@@ -31,29 +62,8 @@ DEVICE: Literal["cuda", "cpu"] = "cuda"
 IP_ADDRESS_DEFAULT = "127.0.0.1"
 VERSION_DEFAULT = "v2"
 CLIENT_NAME_DEFAULT = "Martin Reinok Python Client"
-OUTPUT_DIRECTORY_DEFAULT = "C:/Users/O/Desktop/Master Thesis/LOG_IMAGES/06.03.2024"
+OUTPUT_DIRECTORY_DEFAULT = "C:/Users/O/Desktop/Master Thesis/LOG_IMAGES/05.04.2024"
 CNN_MODEL_DEFAULT = "MODEL_512_V3"
-
-"""
-Live Server info:
-(optional) route add 192.168.182.0 mask 255.255.255.0 192.168.182.1 if 26 -p
-Access-i IP: 10.89.184.9
-Version: v1
-
-Access-i simulator info:
-Access-i IP: 127.0.0.1
-Version: v2
-
-Client IP: 192.168.182.20
-Subnet: 255.255.255.0
-Gateway: 192.168.182.0
-DNS1: 192.168.182.1
-"""
-IP_ADDRESS_DEFAULT = "127.0.0.1"
-VERSION_DEFAULT = "v2"
-CLIENT_NAME_DEFAULT = "Martin Reinok Python Client"
-OUTPUT_DIRECTORY_DEFAULT = "C:/Users/C/Desktop/Master Thesis/LOG_IMAGES"
-CNN_MODEL_DEFAULT = "MODEL_512_V2"
 
 
 class MyMainWindow(QMainWindow):
@@ -164,9 +174,11 @@ class MyMainWindow(QMainWindow):
             self.tracking_thread = None
 
     def open_scan_suite(self):
-        self.scan_suite = ScanSuite(accessi_ip_address=self.ui.field_ip_address.text(),
-                                    accessi_version=self.ui.field_version.text(),
-                                    SUBSCRIBE_PORT=self.tracking.RAW_COORDINATE_PUBLISH_PORT)
+        self.scan_suite = multiprocessing.Process(target=ScanSuiteWindow.start,
+                                                  args=(str(self.tracking.RAW_COORDINATE_PUBLISH_PORT),
+                                                        str(self.ui.field_ip_address.text()),
+                                                        str(self.ui.field_version.text())))
+        self.scan_suite.start()
 
     def show_websocket_output(self):
         if self.ui.check_websocket_output.isChecked():
@@ -213,17 +225,17 @@ class MyMainWindow(QMainWindow):
         except:
             pass
         if self.scan_suite is not None:
-            self.scan_suite.close()
+            self.scan_suite.kill()
         QMainWindow.closeEvent(self, event)
 
     def select_output_directory(self):
-        directory = select_directory()
+        directory = select_directory(self.ui.field_output_directory.text())
         self.ui.field_output_directory.setText(directory)
 
 
-def select_directory():
+def select_directory(default_dir=None):
     file_dialog = QFileDialog()
-    directory_path = file_dialog.getExistingDirectory(None, "Select Directory", "")
+    directory_path = file_dialog.getExistingDirectory(None, "Select Directory", default_dir)
     return directory_path
 
 

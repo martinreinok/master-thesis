@@ -76,15 +76,11 @@ class GuidewireTracking(QObject):
             if prediction.image is None:
                 continue
             centroids, threshold = self.find_artifact_centroids(prediction.image)
-<<<<<<< HEAD
-
             # Send Centroids Data to socket.
             centroids_mm = [[element * prediction.metadata.value.image.dimensions.voxelSize.column for element in sublist] for sublist in centroids]
             self.raw_coordinate_publisher_socket.send(pickle.dumps(centroids_mm))
             print(f"Send coordinates: {centroids_mm}")
 
-=======
->>>>>>> 3e274dc2e2e4ec1ce826a8597eba1621331daea1
             for tracker in self.trackers:
                 tracker.update(centroids)
                 if tracker.coordinates in centroids:

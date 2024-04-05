@@ -3,6 +3,8 @@ import vtkmodules.vtkInteractionStyle
 # noinspection PyUnresolvedReferences
 import vtkmodules.vtkRenderingOpenGL2
 
+import multiprocessing
+
 from vtkmodules.vtkCommonCore import VTK_INT
 from vtkmodules.util.misc import calldata_type
 
@@ -42,17 +44,22 @@ class ScanSuiteWindow:
         self.window_interactor = None
         self.mri_slice_object = None
         self.mri_slice_actor = None
+        self.stl_reader = None
+        self.stl_actor = None
         self.render_window = None
         self.camera_manipulator_widget = None
         self.spline_widget = None
 
-        self.register()
-        self.initialize_vtk()
-        self.add_mri_slice_actor()
-        self.add_spline_widget()
-        self.add_phantom_actor()
-        self.add_axes_actor()
-        self.start_vtk()
+    @staticmethod
+    def start(SUBSCRIBE_PORT=None, accessi_ip_address=None, accessi_version=None):
+        scan_suite = ScanSuiteWindow(SUBSCRIBE_PORT, accessi_ip_address, accessi_version)
+        scan_suite.register()
+        scan_suite.initialize_vtk()
+        scan_suite.add_mri_slice_actor()
+        scan_suite.add_spline_widget()
+        scan_suite.add_phantom_actor()
+        scan_suite.add_axes_actor()
+        scan_suite.start_vtk()
 
     def register(self):
         if self.Access.config.ip_address is not None:
@@ -94,18 +101,21 @@ class ScanSuiteWindow:
         mapper_mri_slice.SetInputConnection(self.mri_slice_object.GetOutputPort())
         self.mri_slice_actor = vtkActor()
         self.mri_slice_actor.SetMapper(mapper_mri_slice)
+        self.mri_slice_actor.GetProperty().SetOpacity(0.5)
         self.renderer.AddActor(self.mri_slice_actor)
 
     def add_phantom_actor(self):
-        stl_reader = vtkSTLReader()
-        stl_reader.SetFileName("STL_MODEL/phantom.stl")
-        stl_reader.Update()
+        self.stl_reader = vtkSTLReader()
+        self.stl_reader.SetFileName("STL_MODEL/phantom.stl")
+        self.stl_reader.Update()
         stl_mapper = vtkPolyDataMapper()
-        stl_mapper.SetInputConnection(stl_reader.GetOutputPort())
-        stl_actor = vtkActor()
-        stl_actor.SetMapper(stl_mapper)
-        self.renderer.AddActor(stl_actor)
-        stl_actor.GetProperty().SetOpacity(0.7)
+        stl_mapper.SetInputConnection(self.stl_reader.GetOutputPort())
+        self.stl_actor = vtkActor()
+        self.stl_actor.SetMapper(stl_mapper)
+        self.renderer.AddActor(self.stl_actor)
+        self.stl_actor.GetProperty().SetOpacity(1)
+        # self.stl_actor.GetProperty().SetEdgeVisibility(1)
+        # self.stl_actor.GetProperty().SetEdgeColor(1, 1, 1)
         self.window_interactor.Render()
 
     def add_axes_actor(self):
@@ -140,13 +150,13 @@ class ScanSuiteWindow:
 
     @calldata_type(VTK_INT)
     def set_mri_slice_transform_callback(self, caller, timer_event, some_argument):
-        print(1)
         if self.registered:
             position = self.Access.ParameterStandard.get_slice_position_dcs().value
             orientation = self.Access.ParameterStandard.get_slice_orientation_dcs()
             thickness = self.Access.ParameterStandard.get_slice_thickness().value
             field_of_view = self.Access.ParameterStandard.get_field_of_view_read().value
-            orientation_vtk = self.convert_mri_orientation_to_vtk(orientation.normal, orientation.phase, orientation.read)
+            orientation_vtk = self.convert_mri_orientation_to_vtk(orientation.normal, orientation.phase,
+                                                                  orientation.read)
 
             self.mri_slice_actor.SetPosition(position.x, position.y, position.z)
             self.mri_slice_actor.SetOrientation(orientation_vtk[0], orientation_vtk[1], orientation_vtk[2])
@@ -154,9 +164,11 @@ class ScanSuiteWindow:
             self.mri_slice_object.SetYLength(field_of_view)
             self.mri_slice_object.SetZLength(int(thickness))
             self.mri_slice_actor.GetProperty().SetColor((1, 0, 0))
-            self.mri_slice_actor.GetProperty().SetOpacity(0.9)
+            self.render_window.Render()
 
     def start_vtk(self):
+        self.window_interactor.Render()
+
         self.render_window.AddRenderer(self.renderer)
         self.window_interactor.SetRenderWindow(self.render_window)
         self.camera_manipulator_widget.SetParentRenderer(self.renderer)
@@ -178,5 +190,6 @@ class SplineCallback:
         print(f'Length: {length}')
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     ScanSuite = ScanSuiteWindow()
+    ScanSuite.start()
