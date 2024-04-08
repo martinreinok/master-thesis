@@ -2,8 +2,6 @@
 The coding style of this entire program is questionable,
 but it works --.--
 
-The Qt UI file for main_ui.py is sadly lost, got erased accidentally.
-
 This program consists of multiple modules:
 - Access-i Client: Responsible for abstracting communication with Siemens MRI,
     using my own library (pip install accessi). It should be used as kind-of singleton.
@@ -62,7 +60,7 @@ DEVICE: Literal["cuda", "cpu"] = "cuda"
 IP_ADDRESS_DEFAULT = "127.0.0.1"
 VERSION_DEFAULT = "v2"
 CLIENT_NAME_DEFAULT = "Martin Reinok Python Client"
-OUTPUT_DIRECTORY_DEFAULT = "C:/Users/O/Desktop/Master Thesis/LOG_IMAGES/05.04.2024"
+OUTPUT_DIRECTORY_DEFAULT = "C:/Users/O/Desktop/Master Thesis/LOG_IMAGES/08.04.2024"
 CNN_MODEL_DEFAULT = "MODEL_512_V3"
 
 
@@ -126,6 +124,7 @@ class MyMainWindow(QMainWindow):
         self.ui.check_tracking_output.stateChanged.connect(self.show_tracking_output)
         self.ui.check_guidewire_tracking_active.stateChanged.connect(self.set_tracking_active)
         self.ui.check_tracking_move_slice.stateChanged.connect(self.set_tracking_move_slice)
+        self.ui.combo_accessi_image_format.currentTextChanged.connect(self.set_image_format)
 
         """
         Combo
@@ -134,8 +133,16 @@ class MyMainWindow(QMainWindow):
                        callable(getattr(Access.ParameterStandard, method)) and method.startswith("get_")]:
             self.ui.combo_get_parameter_choice.addItem(method)
 
+        for method in [method for method in dir(Access.ParameterConfigured) if
+                       callable(getattr(Access.ParameterConfigured, method)) and method.startswith("get_")]:
+            self.ui.combo_get_parameter_choice.addItem(method)
+
         for method in [method for method in dir(Access.ParameterStandard) if
                        callable(getattr(Access.ParameterStandard, method)) and method.startswith("set_")]:
+            self.ui.combo_set_parameter_choice.addItem(method)
+
+        for method in [method for method in dir(Access.ParameterConfigured) if
+                       callable(getattr(Access.ParameterConfigured, method)) and method.startswith("set_")]:
             self.ui.combo_set_parameter_choice.addItem(method)
 
     def set_websocket_active(self):
@@ -174,6 +181,8 @@ class MyMainWindow(QMainWindow):
             self.tracking_thread = None
 
     def open_scan_suite(self):
+        # For updates during runtime, I import it again.
+        from scan_suite import ScanSuiteWindow
         self.scan_suite = multiprocessing.Process(target=ScanSuiteWindow.start,
                                                   args=(str(self.tracking.RAW_COORDINATE_PUBLISH_PORT),
                                                         str(self.ui.field_ip_address.text()),
@@ -227,6 +236,9 @@ class MyMainWindow(QMainWindow):
         if self.scan_suite is not None:
             self.scan_suite.kill()
         QMainWindow.closeEvent(self, event)
+
+    def set_image_format(self):
+        self.access_client.Access.Image.set_image_format(self.ui.combo_accessi_image_format.currentText())
 
     def select_output_directory(self):
         directory = select_directory(self.ui.field_output_directory.text())

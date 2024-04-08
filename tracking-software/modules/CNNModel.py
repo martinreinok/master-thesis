@@ -23,6 +23,7 @@ class CNNModel(QObject):
         self.folds = (4,)
         self.model = None
         self.window = window
+        self.input_image_dimensions = None
 
     def prepare_cnn(self, torch, nnUNetPredictor, path_to_model_directory, checkpoint_name, folds, DEVICE):
         """
@@ -73,9 +74,11 @@ class CNNModel(QObject):
             image, metadata = convert_websocket_data_to_image(data)
             if image is None:
                 continue
+            self.input_image_dimensions = (metadata.value.image.dimensions.columns, metadata.value.image.dimensions.rows)
             output_image = self.predict(image)
             if output_image is not None:
                 output_image = (output_image * 255).astype(np.uint8)
+                output_image = cv2.resize(output_image, self.input_image_dimensions)
                 output = ImageData(image_data=output_image, metadata=metadata)
                 publisher_socket.send(pickle.dumps(output))
                 self.status_cnn_signal.emit(f"Latency: {calculate_latency(metadata)}s")

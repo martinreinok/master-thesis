@@ -125,10 +125,13 @@ class AccessiClient:
         self.Access.TemplateModification.close()
 
     def get_parameter(self):
+        # TODO: Make this not hardcoded to ParameterStandard
         parameter = self.ui.combo_get_parameter_choice.currentText()
         try:
-            answer = getattr(self.Access.ParameterStandard, parameter)()
-            self.Access.ParameterStandard.get_slice_position_dcs()
+            if hasattr(self.Access.ParameterStandard, parameter):
+                answer = getattr(self.Access.ParameterStandard, parameter)()
+            else:
+                answer = getattr(self.Access.ParameterConfigured, parameter)()
             if answer.result.success:
                 del answer.result
                 value = ""
@@ -146,7 +149,10 @@ class AccessiClient:
             val = [float(num.strip()) for num in self.ui.field_parameter_value.text().split(",")]
             if len(val) >= 9:
                 val_tuples = [(val[i], val[i + 1], val[i + 2]) for i in range(0, 9, 3)]
-                answer = getattr(self.Access.ParameterStandard, parameter)(*val_tuples)
+                if hasattr(self.Access.ParameterStandard, parameter):
+                    answer = getattr(self.Access.ParameterStandard, parameter)(*val_tuples)
+                else:
+                    answer = getattr(self.Access.ParameterConfigured, parameter)(*val_tuples)
             else:
                 answer = getattr(self.Access.ParameterStandard, parameter)(*val)
             if answer.result.success:

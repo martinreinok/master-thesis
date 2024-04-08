@@ -18,12 +18,15 @@ def convert_websocket_data_to_image(websocket_data):
     image = None
     metadata = None
     if "imageStream" in image_data:
-        metadata = image_data[2]
-        image = image_data[2].value.image.data
-        image = np.frombuffer(base64.b64decode(image), dtype=np.uint16)
-        image = np.reshape(image, (image_data[2].value.image.dimensions.columns,
-                                   image_data[2].value.image.dimensions.rows))
-        image = (image / image.max() * 255).astype(np.uint8)
+        image, metadata = convert_metadata_to_image(image_data[2])
+    return image, metadata
+
+
+def convert_metadata_to_image(metadata):
+    image = metadata.value.image.data
+    image = np.frombuffer(base64.b64decode(image), dtype=np.uint16)
+    image = np.reshape(image, (metadata.value.image.dimensions.columns, metadata.value.image.dimensions.rows))
+    image = (image / image.max() * 255).astype(np.uint8)
     return image, metadata
 
 

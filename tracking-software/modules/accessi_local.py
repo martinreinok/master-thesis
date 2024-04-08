@@ -12,6 +12,7 @@ Only insecure HTTPS is currently supported.
 # TODO: Debugging Service Not implemented.
 
 from types import SimpleNamespace
+from math import atan2, degrees
 from typing import Literal
 import numpy as np
 import websockets
@@ -464,38 +465,80 @@ class ParameterStandard:
         return send_request(url, data, "POST")
 
     @staticmethod
-    def set_slice_orientation_degrees(x_deg, y_deg, z_deg, allow_side_effects=True, index=0):
+    def set_slice_orientation_pcs(normal: tuple = (0, 0, 0), phase: tuple = (0, 0, 0), read: tuple = (0, 0, 0),
+                                  allow_side_effects=True, index=0):
         """
         Response example:
          - "result":{"success":true,"reason":"ok","time":"20170608T143325.423"},
          - "normalSet":{"x":0,"y":0,"z":-1.0},
          - "phaseSet":{"x":0,"y":-1.0,"z":0},
          - "readSet":{"x":-1.0,"y":0,"z":0}
-         Don't really understand how the math works
         """
-        # Convert degrees to radians
-        x_rad = np.radians(x_deg)
-        y_rad = np.radians(y_deg)
-        z_rad = np.radians(z_deg)
+        url = f"{config.base_url()}/parameter/standard/setSliceOrientationPcs"
+        data = {"sessionId": config.session_id,
+                "index": index,
+                "normal": {"sag": float(normal[0]), "cor": float(normal[1]), "tra": float(normal[2])},
+                "phase": {"sag": float(phase[0]), "cor": float(phase[1]), "tra": float(phase[2])},
+                "read": {"sag": float(read[0]), "cor": float(read[1]), "tra": float(read[2])},
+                "allowSideEffects": allow_side_effects}
+        return send_request(url, data, "POST")
 
-        # Calculate the rotation matrices around each axis
-        Rx = np.array([[1, 0, 0], [0, np.cos(x_rad), -np.sin(x_rad)], [0, np.sin(x_rad), np.cos(x_rad)]])
-        Ry = np.array([[np.cos(y_rad), 0, np.sin(y_rad)], [0, 1, 0], [-np.sin(y_rad), 0, np.cos(y_rad)]])
-        Rz = np.array([[np.cos(z_rad), -np.sin(z_rad), 0], [np.sin(z_rad), np.cos(z_rad), 0], [0, 0, 1]])
+    @staticmethod
+    def get_slice_orientation_pcs():
+        """
+        Response example:
+         - "result":{"success":true,"reason":"ok","time":"20170608T143325.423"},
+         - "normal":{"x":0,"y":0,"z":-1.0},
+         - "phase":{"x":0,"y":-1.0,"z":0},
+         - "read":{"x":-1.0,"y":0,"z":0}
+        """
+        url = f"{config.base_url()}/parameter/standard/getSliceOrientationPcs"
+        data = {"sessionId": config.session_id}
+        return send_request(url, data, "GET")
 
-        # Combine the rotation matrices to get the overall rotation matrix
-        R = np.dot(Rz, np.dot(Ry, Rx))
+    @staticmethod
+    def set_slice_orientation_degrees_dcs(roll_degrees, pitch_degrees, yaw_degrees, allow_side_effects=True, index=0):
+        # Convert angles (in degrees) to unit vectors
+        roll = np.radians(roll_degrees)
+        pitch = np.radians(pitch_degrees)
+        yaw = np.radians(yaw_degrees)
 
-        # Extract the orientation vectors (normal, phase, read) from the rotation matrix
-        normal = R[:, 2]  # Third column
-        phase = R[:, 1]  # Second column
-        read = R[:, 0]  # First column
+        rotation_matrix = np.array([
+            [np.cos(yaw) * np.cos(pitch), np.cos(yaw) * np.sin(pitch) * np.sin(roll) - np.sin(yaw) * np.cos(roll),
+             np.cos(yaw) * np.sin(pitch) * np.cos(roll) + np.sin(yaw) * np.sin(roll)],
+            [np.sin(yaw) * np.cos(pitch), np.sin(yaw) * np.sin(pitch) * np.sin(roll) + np.cos(yaw) * np.cos(roll),
+             np.sin(yaw) * np.sin(pitch) * np.cos(roll) - np.cos(yaw) * np.sin(roll)],
+            [-np.sin(pitch), np.cos(pitch) * np.sin(roll), np.cos(pitch) * np.cos(roll)]
+        ])
 
-        # Normalize the vectors
-        normal /= np.linalg.norm(normal)
-        phase /= np.linalg.norm(phase)
-        read /= np.linalg.norm(read)
+        normal = np.array([rotation_matrix[2, 0], rotation_matrix[2, 1], rotation_matrix[2, 2]])
+        phase = np.array([rotation_matrix[1, 0], rotation_matrix[1, 1], rotation_matrix[1, 2]])
+        read = np.array([rotation_matrix[0, 0], rotation_matrix[0, 1], rotation_matrix[0, 2]])
+
+        # Set the slice orientation using the RAS coordinate system
         return ParameterStandard.set_slice_orientation_dcs(normal, phase, read, allow_side_effects, index)
+
+    @staticmethod
+    def get_slice_orientation_degrees_dcs():
+        answer = ParameterStandard.get_slice_orientation_dcs()
+        if not answer.result.success:
+            return answer.result.reason
+
+        normal = np.array([answer.normal.x, answer.normal.y, answer.normal.z])
+        phase = np.array([answer.phase.x, answer.phase.y, answer.phase.z])
+        read = np.array([answer.read.x, answer.read.y, answer.read.z])
+
+        rotation_matrix = np.column_stack((read, phase, normal))
+
+        roll = np.arctan2(rotation_matrix[1, 0], rotation_matrix[0, 0])
+        pitch = np.arctan2(-rotation_matrix[2, 0], np.sqrt(rotation_matrix[2, 1] ** 2 + rotation_matrix[2, 2] ** 2))
+        yaw = np.arctan2(rotation_matrix[2, 1], rotation_matrix[2, 2])
+
+        # Convert unit vectors to angles (in degrees)
+        answer.normal = np.degrees(roll)
+        answer.phase = np.degrees(pitch)
+        answer.read = np.degrees(yaw)
+        return answer
 
     @staticmethod
     def get_slice_thickness():

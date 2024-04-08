@@ -76,10 +76,11 @@ class GuidewireTracking(QObject):
             if prediction.image is None:
                 continue
             centroids, threshold = self.find_artifact_centroids(prediction.image)
+
             # Send Centroids Data to socket.
             centroids_mm = [[element * prediction.metadata.value.image.dimensions.voxelSize.column for element in sublist] for sublist in centroids]
-            self.raw_coordinate_publisher_socket.send(pickle.dumps(centroids_mm))
-            print(f"Send coordinates: {centroids_mm}")
+            output_3d_suite = ImageData(metadata=prediction.metadata, artifact_coordinates=centroids_mm)
+            self.raw_coordinate_publisher_socket.send(pickle.dumps(output_3d_suite))
 
             for tracker in self.trackers:
                 tracker.update(centroids)
@@ -91,6 +92,7 @@ class GuidewireTracking(QObject):
                 for centroid in centroids:
                     self.trackers.append(ArtifactTracker(centroid, tracker_id))
                     tracker_id += 1
+
             average_movement = []
             for tracker in self.trackers:
                 if len(tracker.trajectory) >= 2:
@@ -99,13 +101,16 @@ class GuidewireTracking(QObject):
                     cv2.circle(threshold, current_coordinate, 4, color=tracker.color, thickness=-1)
                 for coordinate in set(tracker.trajectory):
                     cv2.circle(threshold, coordinate, 2, color=tracker.color, thickness=-1)
-                # Insignificant movements e.g. standing still is not considered.
-                if np.linalg.norm(np.array(tracker.movement_vector)) > 2:
+                # Insignificant movements e.g. standing still are not considered.
+                if np.linalg.norm(np.array(tracker.movement_vector)) > movement_threshold_mm:
                     average_movement.append(tracker.movement_vector)
+
             if average_movement:
                 average_movement = np.mean(average_movement, axis=0)
+                print(f"Average movement px: {average_movement}")
+                print(f"Voxel size: {prediction.metadata.value.image.dimensions.voxelSize.column}")
                 self.status_guidewire_tracking_signal.emit(
-                    f"({len(self.trackers)}) Move: {average_movement[0]} | {average_movement[1]}")
+                    f"({len(self.trackers)}) Move: {average_movement[0]} | {average_movement[1]} (px)")
             elif not average_movement and len(self.trackers) > 0:
                 self.status_guidewire_tracking_signal.emit(f"({len(self.trackers)}) No movement detected")
             else:
@@ -116,9 +121,8 @@ class GuidewireTracking(QObject):
             if len(average_movement) == 2:
                 movement_request = abs(average_movement[0]) + abs(average_movement[1])
                 if self.move_slice and movement_request > movement_threshold_mm:
-                    metadata = prediction.metadata
-                    self.move_slice_to_target(side_to_side_x=self.convert_px_to_mm(average_movement[0], metadata),
-                                              forward_z=self.convert_px_to_mm(average_movement[1], metadata))
+                    self.move_slice_to_target(side_to_side_x=self.convert_px_to_mm(average_movement[0], prediction.metadata),
+                                              forward_z=self.convert_px_to_mm(average_movement[1], prediction.metadata))
 
     def move_slice_to_target(self, side_to_side_x, forward_z):
         current_location = self.MRI.get_slice_position_dcs().value

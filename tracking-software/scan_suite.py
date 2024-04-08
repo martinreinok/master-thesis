@@ -1,3 +1,7 @@
+import pickle
+import time
+from threading import Thread
+
 # noinspection PyUnresolvedReferences
 import vtkmodules.vtkInteractionStyle
 # noinspection PyUnresolvedReferences
@@ -14,6 +18,9 @@ import vtk
 
 sys.path.append("./modules")
 import modules.accessi_local as Access
+import modules.ImageData as ImageData
+from modules.shared_methods import convert_metadata_to_image
+
 from PySide6.QtWidgets import QApplication, QMainWindow, QFileDialog
 import zmq
 
@@ -36,6 +43,7 @@ from vtk import vtkSTLReader
 class ScanSuiteWindow:
     def __init__(self, SUBSCRIBE_PORT=None, accessi_ip_address=None, accessi_version=None):
         self.SUBSCRIBE_PORT = SUBSCRIBE_PORT
+        self.subscriber_socket = None
         self.Access = Access
         self.registered = False
         self.Access.config.ip_address = accessi_ip_address
@@ -49,6 +57,9 @@ class ScanSuiteWindow:
         self.render_window = None
         self.camera_manipulator_widget = None
         self.spline_widget = None
+        self.current_mri_image = None
+        self.current_artifact_coordinates = []
+        self.drawn_artifacts = []
 
     @staticmethod
     def start(SUBSCRIBE_PORT=None, accessi_ip_address=None, accessi_version=None):
@@ -104,6 +115,18 @@ class ScanSuiteWindow:
         self.mri_slice_actor.GetProperty().SetOpacity(0.5)
         self.renderer.AddActor(self.mri_slice_actor)
 
+    def add_sphere_actor(self, x, y, z):
+        sphere_object = vtkSphereSource()
+        sphere_object.SetCenter(x, y, z)
+        sphere_object.SetRadius(5)
+        mapper_sphere_object = vtkPolyDataMapper()
+        mapper_sphere_object.SetInputConnection(sphere_object.GetOutputPort())
+        sphere_actor = vtkActor()
+        sphere_actor.SetMapper(mapper_sphere_object)
+        sphere_actor.GetProperty().SetColor((1, 1, 0))
+        self.renderer.AddActor(sphere_actor)
+        return sphere_actor
+
     def add_phantom_actor(self):
         self.stl_reader = vtkSTLReader()
         self.stl_reader.SetFileName("STL_MODEL/phantom.stl")
@@ -152,21 +175,30 @@ class ScanSuiteWindow:
     def set_mri_slice_transform_callback(self, caller, timer_event, some_argument):
         if self.registered:
             position = self.Access.ParameterStandard.get_slice_position_dcs().value
-            orientation = self.Access.ParameterStandard.get_slice_orientation_dcs()
             thickness = self.Access.ParameterStandard.get_slice_thickness().value
             field_of_view = self.Access.ParameterStandard.get_field_of_view_read().value
-            orientation_vtk = self.convert_mri_orientation_to_vtk(orientation.normal, orientation.phase,
-                                                                  orientation.read)
+            orientation = self.Access.ParameterStandard.get_slice_orientation_degrees_dcs()
 
             self.mri_slice_actor.SetPosition(position.x, position.y, position.z)
-            self.mri_slice_actor.SetOrientation(orientation_vtk[0], orientation_vtk[1], orientation_vtk[2])
+            self.mri_slice_actor.SetOrientation(orientation.normal, orientation.phase, orientation.read)
             self.mri_slice_object.SetXLength(field_of_view)
             self.mri_slice_object.SetYLength(field_of_view)
             self.mri_slice_object.SetZLength(int(thickness))
             self.mri_slice_actor.GetProperty().SetColor((1, 0, 0))
+            for actor in self.drawn_artifacts:
+                self.renderer.RemoveActor(actor)
+            for coord in self.current_artifact_coordinates:
+                self.drawn_artifacts.append(self.add_sphere_actor(coord[0], coord[1], coord[2]))
             self.render_window.Render()
 
     def start_vtk(self):
+        if self.SUBSCRIBE_PORT is not None and self.SUBSCRIBE_PORT != "None":
+            context = zmq.Context()
+            self.subscriber_socket = context.socket(zmq.SUB)
+            self.subscriber_socket.setsockopt(zmq.CONFLATE, 1)
+            self.subscriber_socket.connect("tcp://127.0.0.1:" + str(self.SUBSCRIBE_PORT))
+            self.subscriber_socket.subscribe("")
+
         self.window_interactor.Render()
 
         self.render_window.AddRenderer(self.renderer)
@@ -177,7 +209,38 @@ class ScanSuiteWindow:
         self.spline_widget.On()
         self.render_window.Render()
         self.render_window.SetWindowName("3D Suite")
+
+        data_thread = Thread(target=self.get_coordinate_data_thread, daemon=True)
+        data_thread.start()
+
         self.window_interactor.Start()
+
+    def get_coordinate_data_thread(self):
+        while True:
+            time.sleep(0.3)
+            try:
+                if self.SUBSCRIBE_PORT is not None:
+                    data = self.subscriber_socket.recv()
+                    tracking_data: ImageData = pickle.loads(data)
+                    self.current_mri_image = convert_metadata_to_image(tracking_data.metadata)
+                    # mri_plane_coordinates = tracking_data.metadata.value.image.coordinates.mrSliceDcs.position
+                    # mri_plane_dimension_mm = tracking_data.metadata.value.image.dimensions.columns * tracking_data.metadata.value.image.dimensions.voxelSize.column
+                    slice_position = self.mri_slice_actor.GetPosition()
+                    slice_orientation = self.mri_slice_actor.GetOrientation()
+                    transform = vtk.vtkTransform()
+                    transform.PostMultiply()
+                    transform.Translate(slice_position)
+                    transform.RotateZ(slice_orientation[2])
+
+                    transformed_coordinates = []
+                    for coord in tracking_data.artifact_coordinates:
+                        coord_3d = [coord[0], coord[1], slice_position[2]]
+                        coord_world = transform.TransformPoint(coord_3d)
+                        transformed_coordinates.append(coord_world)
+
+                    self.current_artifact_coordinates = transformed_coordinates
+            except Exception as error:
+                print(f"Error in get_coordinate thread: {error}")
 
 
 class SplineCallback:
