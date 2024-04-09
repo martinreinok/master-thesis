@@ -220,9 +220,9 @@ class ScanSuiteWindow:
             transform.SetMatrix(self.mri_slice_actor.GetMatrix())
             self.mri_slice_axes_actor.SetUserTransform(transform)
             # These points suck (╯°□°)╯︵ ┻━┻
-            self.mri_image_plane_source.SetOrigin(150, -150, 0)
-            self.mri_image_plane_source.SetPoint1(-150, -150, 0)
-            self.mri_image_plane_source.SetPoint2(150, 150, 0)
+            self.mri_image_plane_source.SetOrigin((field_of_view//2), -(field_of_view//2), 0)
+            self.mri_image_plane_source.SetPoint1(-(field_of_view//2), -(field_of_view//2), 0)
+            self.mri_image_plane_source.SetPoint2((field_of_view//2), (field_of_view//2), 0)
             self.mri_image_plane_actor.SetUserTransform(transform)
 
 
