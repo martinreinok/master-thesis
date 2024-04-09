@@ -498,28 +498,54 @@ class ParameterStandard:
 
     @staticmethod
     def set_slice_orientation_degrees_dcs(roll_degrees, pitch_degrees, yaw_degrees, allow_side_effects=True, index=0):
-        # Convert angles (in degrees) to unit vectors
-        roll = np.radians(roll_degrees)
-        pitch = np.radians(pitch_degrees)
-        yaw = np.radians(yaw_degrees)
+        """
+        This math is not completely verified but seems to work.
+        Response example:
+         - "result":{"success":true,"reason":"ok","time":"20170608T143325.423"},
+         - "normalSet":{"x":0,"y":0,"z":-1.0},
+         - "phaseSet":{"x":0,"y":-1.0,"z":0},
+         - "readSet":{"x":-1.0,"y":0,"z":0}
+        """
+        rotation_matrix = ParameterStandard.euler_to_rotation_matrix((roll_degrees, pitch_degrees, yaw_degrees))
+        basis_vectors = np.eye(3)
+        rotated_vectors = np.dot(rotation_matrix, basis_vectors.T).T
+        normalized_vectors = rotated_vectors / np.linalg.norm(rotated_vectors, axis=1, keepdims=True)
 
-        rotation_matrix = np.array([
-            [np.cos(yaw) * np.cos(pitch), np.cos(yaw) * np.sin(pitch) * np.sin(roll) - np.sin(yaw) * np.cos(roll),
-             np.cos(yaw) * np.sin(pitch) * np.cos(roll) + np.sin(yaw) * np.sin(roll)],
-            [np.sin(yaw) * np.cos(pitch), np.sin(yaw) * np.sin(pitch) * np.sin(roll) + np.cos(yaw) * np.cos(roll),
-             np.sin(yaw) * np.sin(pitch) * np.cos(roll) - np.cos(yaw) * np.sin(roll)],
-            [-np.sin(pitch), np.cos(pitch) * np.sin(roll), np.cos(pitch) * np.cos(roll)]
-        ])
+        for vector in normalized_vectors:
+            if vector[2] < 0:  # Ensure the largest component is positive
+                vector *= -1
 
-        normal = np.array([rotation_matrix[2, 0], rotation_matrix[2, 1], rotation_matrix[2, 2]])
+        normal = np.array([rotation_matrix[0, 0], rotation_matrix[0, 1], rotation_matrix[0, 2]])
         phase = np.array([rotation_matrix[1, 0], rotation_matrix[1, 1], rotation_matrix[1, 2]])
-        read = np.array([rotation_matrix[0, 0], rotation_matrix[0, 1], rotation_matrix[0, 2]])
+        read = np.array([rotation_matrix[2, 0], rotation_matrix[2, 1], rotation_matrix[2, 2]])
 
         # Set the slice orientation using the RAS coordinate system
         return ParameterStandard.set_slice_orientation_dcs(normal, phase, read, allow_side_effects, index)
 
     @staticmethod
+    def euler_to_rotation_matrix(angles=(0, 0, 0)):
+        phi, theta, psi = np.radians(angles)
+        R_x = np.array([[1, 0, 0],
+                        [0, np.cos(phi), -np.sin(phi)],
+                        [0, np.sin(phi), np.cos(phi)]])
+        R_y = np.array([[np.cos(theta), 0, np.sin(theta)],
+                        [0, 1, 0],
+                        [-np.sin(theta), 0, np.cos(theta)]])
+        R_z = np.array([[np.cos(psi), -np.sin(psi), 0],
+                        [np.sin(psi), np.cos(psi), 0],
+                        [0, 0, 1]])
+        return np.dot(R_z, np.dot(R_y, R_x))
+
+    @staticmethod
     def get_slice_orientation_degrees_dcs():
+        """
+        This math is not completely verified but seems to work.
+        Response example:
+         - "result":{"success":true,"reason":"ok","time":"20170608T143325.423"},
+         - "normal":{180},
+         - "phase":{0},
+         - "read":{180}
+        """
         answer = ParameterStandard.get_slice_orientation_dcs()
         if not answer.result.success:
             return answer.result.reason
@@ -528,16 +554,16 @@ class ParameterStandard:
         phase = np.array([answer.phase.x, answer.phase.y, answer.phase.z])
         read = np.array([answer.read.x, answer.read.y, answer.read.z])
 
-        rotation_matrix = np.column_stack((read, phase, normal))
+        rotation_matrix = np.array([normal, phase, read])
 
-        roll = np.arctan2(rotation_matrix[1, 0], rotation_matrix[0, 0])
-        pitch = np.arctan2(-rotation_matrix[2, 0], np.sqrt(rotation_matrix[2, 1] ** 2 + rotation_matrix[2, 2] ** 2))
-        yaw = np.arctan2(rotation_matrix[2, 1], rotation_matrix[2, 2])
+        theta = -np.arcsin(rotation_matrix[0, 2])  # pitch
+        psi = np.arctan2(rotation_matrix[0, 1], rotation_matrix[0, 0])  # yaw
+        phi = np.arctan2(rotation_matrix[1, 2], rotation_matrix[2, 2])  # roll
 
         # Convert unit vectors to angles (in degrees)
-        answer.normal = np.degrees(roll)
-        answer.phase = np.degrees(pitch)
-        answer.read = np.degrees(yaw)
+        answer.normal = np.degrees(phi)
+        answer.phase = np.degrees(theta)
+        answer.read = np.degrees(psi)
         return answer
 
     @staticmethod

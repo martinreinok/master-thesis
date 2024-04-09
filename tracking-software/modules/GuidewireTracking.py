@@ -107,8 +107,8 @@ class GuidewireTracking(QObject):
 
             if average_movement:
                 average_movement = np.mean(average_movement, axis=0)
-                print(f"Average movement px: {average_movement}")
-                print(f"Voxel size: {prediction.metadata.value.image.dimensions.voxelSize.column}")
+                # print(f"Average movement px: {average_movement}")
+                # print(f"Voxel size: {prediction.metadata.value.image.dimensions.voxelSize.column}")
                 self.status_guidewire_tracking_signal.emit(
                     f"({len(self.trackers)}) Move: {average_movement[0]} | {average_movement[1]} (px)")
             elif not average_movement and len(self.trackers) > 0:

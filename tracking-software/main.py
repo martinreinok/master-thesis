@@ -42,7 +42,7 @@ from scan_suite import ScanSuiteWindow
 
 """
 Live Server info:
-(optional) route add 192.168.182.0 mask 255.255.255.0 192.168.182.1 if 47 -p
+(optional) route add 192.168.182.0 mask 255.255.255.0 192.168.182.1 if 3 -p
 Access-i IP: 10.89.184.9
 Version: v1
 
@@ -133,17 +133,17 @@ class MyMainWindow(QMainWindow):
                        callable(getattr(Access.ParameterStandard, method)) and method.startswith("get_")]:
             self.ui.combo_get_parameter_choice.addItem(method)
 
-        for method in [method for method in dir(Access.ParameterConfigured) if
-                       callable(getattr(Access.ParameterConfigured, method)) and method.startswith("get_")]:
-            self.ui.combo_get_parameter_choice.addItem(method)
-
         for method in [method for method in dir(Access.ParameterStandard) if
                        callable(getattr(Access.ParameterStandard, method)) and method.startswith("set_")]:
             self.ui.combo_set_parameter_choice.addItem(method)
 
-        for method in [method for method in dir(Access.ParameterConfigured) if
-                       callable(getattr(Access.ParameterConfigured, method)) and method.startswith("set_")]:
-            self.ui.combo_set_parameter_choice.addItem(method)
+        # for method in [method for method in dir(Access.ParameterConfigured) if
+        #                callable(getattr(Access.ParameterConfigured, method)) and method.startswith("get_")]:
+        #     self.ui.combo_get_parameter_choice.addItem(method)
+
+        # for method in [method for method in dir(Access.ParameterConfigured) if
+        #                callable(getattr(Access.ParameterConfigured, method)) and method.startswith("set_")]:
+        #     self.ui.combo_set_parameter_choice.addItem(method)
 
     def set_websocket_active(self):
         if self.ui.check_websocket_active.isChecked():

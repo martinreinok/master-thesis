@@ -1,11 +1,14 @@
 import pickle
 import time
 from threading import Thread
+from threading import Lock
 
 # noinspection PyUnresolvedReferences
 import vtkmodules.vtkInteractionStyle
 # noinspection PyUnresolvedReferences
 import vtkmodules.vtkRenderingOpenGL2
+from vtkmodules.util import numpy_support
+from vtkmodules.vtkCommonDataModel import vtkPlane, vtkImageData
 
 import multiprocessing
 
@@ -13,8 +16,10 @@ from vtkmodules.vtkCommonCore import VTK_INT
 from vtkmodules.util.misc import calldata_type
 
 import sys
+import os
 import numpy as np
 import vtk
+from vtkmodules.vtkFiltersCore import vtkCutter, vtkStripper
 
 sys.path.append("./modules")
 import modules.accessi_local as Access
@@ -23,10 +28,11 @@ from modules.shared_methods import convert_metadata_to_image
 
 from PySide6.QtWidgets import QApplication, QMainWindow, QFileDialog
 import zmq
+import math
 
 from vtkmodules.vtkCommonColor import vtkNamedColors
 from vtkmodules.vtkCommonCore import vtkCommand
-from vtkmodules.vtkFiltersSources import vtkCylinderSource, vtkCubeSource, vtkSphereSource
+from vtkmodules.vtkFiltersSources import vtkCylinderSource, vtkCubeSource, vtkSphereSource, vtkPlaneSource
 from vtkmodules.vtkInteractionStyle import vtkInteractorStyleTrackballCamera
 from vtkmodules.vtkInteractionWidgets import vtkCameraOrientationWidget, vtkSplineWidget
 from vtkmodules.vtkRenderingCore import (
@@ -34,14 +40,17 @@ from vtkmodules.vtkRenderingCore import (
     vtkPolyDataMapper,
     vtkRenderWindow,
     vtkRenderWindowInteractor,
-    vtkRenderer
+    vtkRenderer, vtkTexture
 )
 
 from vtk import vtkSTLReader
 
+lineColor = vtkNamedColors().GetColor3d('peacock')
+
 
 class ScanSuiteWindow:
     def __init__(self, SUBSCRIBE_PORT=None, accessi_ip_address=None, accessi_version=None):
+        # this is awful but no comment, it works.
         self.SUBSCRIBE_PORT = SUBSCRIBE_PORT
         self.subscriber_socket = None
         self.Access = Access
@@ -50,16 +59,19 @@ class ScanSuiteWindow:
         self.Access.config.version = accessi_version
         self.renderer = None
         self.window_interactor = None
+        self.mri_slice_fov = None
+        self.mri_image_plane_actor = None
+        self.mri_image_plane_source = None
         self.mri_slice_object = None
         self.mri_slice_actor = None
+        self.mri_slice_axes_actor = None
         self.stl_reader = None
         self.stl_actor = None
         self.render_window = None
         self.camera_manipulator_widget = None
         self.spline_widget = None
-        self.current_mri_image = None
-        self.current_artifact_coordinates = []
         self.drawn_artifacts = []
+        self.tracking_data = None
 
     @staticmethod
     def start(SUBSCRIBE_PORT=None, accessi_ip_address=None, accessi_version=None):
@@ -67,9 +79,10 @@ class ScanSuiteWindow:
         scan_suite.register()
         scan_suite.initialize_vtk()
         scan_suite.add_mri_slice_actor()
-        scan_suite.add_spline_widget()
+        # scan_suite.add_spline_widget()
         scan_suite.add_phantom_actor()
         scan_suite.add_axes_actor()
+        scan_suite.add_image_plane_actor()
         scan_suite.start_vtk()
 
     def register(self):
@@ -94,7 +107,7 @@ class ScanSuiteWindow:
         self.window_interactor.SetRenderWindow(self.render_window)
 
         self.window_interactor.Initialize()
-        self.window_interactor.CreateRepeatingTimer(1000)
+        self.window_interactor.CreateRepeatingTimer(300)
         self.window_interactor.AddObserver("TimerEvent", self.set_mri_slice_transform_callback)
         style = vtkInteractorStyleTrackballCamera()
         self.window_interactor.SetInteractorStyle(style)
@@ -108,68 +121,85 @@ class ScanSuiteWindow:
         self.mri_slice_object.SetXLength(0)
         self.mri_slice_object.SetYLength(0)
         self.mri_slice_object.SetZLength(0)
-        mapper_mri_slice = vtkPolyDataMapper()
-        mapper_mri_slice.SetInputConnection(self.mri_slice_object.GetOutputPort())
-        self.mri_slice_actor = vtkActor()
-        self.mri_slice_actor.SetMapper(mapper_mri_slice)
-        self.mri_slice_actor.GetProperty().SetOpacity(0.5)
+
+        # Extract edges from the cube source
+        edges = vtk.vtkExtractEdges()
+        edges.SetInputConnection(self.mri_slice_object.GetOutputPort())
+
+        # Mapper for the edges
+        mapper_edges = vtk.vtkPolyDataMapper()
+        mapper_edges.SetInputConnection(edges.GetOutputPort())
+
+        # Actor for the edges
+        self.mri_slice_actor = vtk.vtkActor()
+        self.mri_slice_actor.SetMapper(mapper_edges)
+        self.mri_slice_actor.GetProperty().SetColor((0, 0, 0))
+        self.mri_slice_actor.GetProperty().SetLineWidth(4)
+        self.mri_slice_actor.GetProperty().BackfaceCullingOn()
+        self.mri_slice_axes_actor = self.add_axes_actor(50, markers=False)
         self.renderer.AddActor(self.mri_slice_actor)
 
-    def add_sphere_actor(self, x, y, z):
+    def add_sphere_actor(self):
         sphere_object = vtkSphereSource()
-        sphere_object.SetCenter(x, y, z)
         sphere_object.SetRadius(5)
         mapper_sphere_object = vtkPolyDataMapper()
         mapper_sphere_object.SetInputConnection(sphere_object.GetOutputPort())
         sphere_actor = vtkActor()
         sphere_actor.SetMapper(mapper_sphere_object)
-        sphere_actor.GetProperty().SetColor((1, 1, 0))
+        sphere_actor.GetProperty().SetColor(1, 1, 0)
         self.renderer.AddActor(sphere_actor)
         return sphere_actor
 
+    def add_image_plane_actor(self):
+        self.mri_image_plane_source = vtkPlaneSource()
+        planeMapper = vtkPolyDataMapper()
+        planeMapper.SetInputConnection(self.mri_image_plane_source.GetOutputPort())
+
+        self.mri_image_plane_actor = vtkActor()
+        self.mri_image_plane_actor.SetMapper(planeMapper)
+        self.mri_image_plane_actor.GetProperty().SetOpacity(0.8)
+        self.mri_image_plane_actor.VisibilityOff()
+
+        self.renderer.AddActor(self.mri_image_plane_actor)
+        return self.mri_image_plane_actor
+
     def add_phantom_actor(self):
         self.stl_reader = vtkSTLReader()
-        self.stl_reader.SetFileName("STL_MODEL/phantom.stl")
+        latest_file = max(
+            (os.path.join(root, file) for root, _, files in os.walk("STL_MODEL") for file in files),
+            key=os.path.getmtime)
+        print(f"Using STL: {latest_file}")
+        self.stl_reader.SetFileName(latest_file)
         self.stl_reader.Update()
         stl_mapper = vtkPolyDataMapper()
         stl_mapper.SetInputConnection(self.stl_reader.GetOutputPort())
         self.stl_actor = vtkActor()
         self.stl_actor.SetMapper(stl_mapper)
         self.renderer.AddActor(self.stl_actor)
-        self.stl_actor.GetProperty().SetOpacity(1)
+        self.stl_actor.GetProperty().SetOpacity(0.7)
         # self.stl_actor.GetProperty().SetEdgeVisibility(1)
         # self.stl_actor.GetProperty().SetEdgeColor(1, 1, 1)
         self.window_interactor.Render()
 
-    def add_axes_actor(self):
+    def add_axes_actor(self, length=400, markers=True):
         axes = vtk.vtkAxesActor()
-        axes.SetTotalLength(400, 400, 400)
+        axes.SetTotalLength(length, length, length)
         widget = vtk.vtkOrientationMarkerWidget()
+        if not markers:
+            axes.SetAxisLabels(False)
         widget.SetOrientationMarker(axes)
         widget.SetViewport(0.0, 0.0, 0.4, 0.4)
         rgba = [0] * 4
         vtk.vtkNamedColors().GetColor('Carrot', rgba)
         widget.SetOutlineColor(rgba[0], rgba[1], rgba[2])
         self.renderer.AddActor(axes)
+        return axes
 
     def add_spline_widget(self):
         self.spline_widget = vtkSplineWidget()
         self.spline_widget.PlaceWidget(-2.5, 2.5, 3.5, 3.5, 0, 0, )
         self.spline_widget.SetProp3D(self.mri_slice_actor)
         self.spline_widget.AddObserver(vtkCommand.EndInteractionEvent, SplineCallback(self.spline_widget))
-
-    def convert_mri_orientation_to_vtk(self, normal, phase, read):
-        """
-        Convert MRI slice orientation data to VTK rotation angles.
-        """
-        x_deg = np.degrees(np.arctan2(read.z, read.x))  # Rotation around x-axis
-        y_deg = np.degrees(
-            np.arctan2(-phase.y, np.sqrt(phase.x ** 2 + phase.z ** 2)))  # Rotation around y-axis
-        z_deg = np.degrees(np.arctan2(normal.y, normal.x))  # Rotation around z-axis
-        x_deg %= 360
-        y_deg %= 360
-        z_deg %= 360
-        return x_deg, y_deg, z_deg
 
     @calldata_type(VTK_INT)
     def set_mri_slice_transform_callback(self, caller, timer_event, some_argument):
@@ -179,16 +209,25 @@ class ScanSuiteWindow:
             field_of_view = self.Access.ParameterStandard.get_field_of_view_read().value
             orientation = self.Access.ParameterStandard.get_slice_orientation_degrees_dcs()
 
-            self.mri_slice_actor.SetPosition(position.x, position.y, position.z)
+            self.mri_slice_fov = field_of_view
+            self.mri_slice_actor.SetPosition(position.x, -position.y, -position.z)
             self.mri_slice_actor.SetOrientation(orientation.normal, orientation.phase, orientation.read)
             self.mri_slice_object.SetXLength(field_of_view)
             self.mri_slice_object.SetYLength(field_of_view)
             self.mri_slice_object.SetZLength(int(thickness))
-            self.mri_slice_actor.GetProperty().SetColor((1, 0, 0))
-            for actor in self.drawn_artifacts:
-                self.renderer.RemoveActor(actor)
-            for coord in self.current_artifact_coordinates:
-                self.drawn_artifacts.append(self.add_sphere_actor(coord[0], coord[1], coord[2]))
+
+            transform = vtk.vtkTransform()
+            transform.SetMatrix(self.mri_slice_actor.GetMatrix())
+            self.mri_slice_axes_actor.SetUserTransform(transform)
+            # These points suck (╯°□°)╯︵ ┻━┻
+            self.mri_image_plane_source.SetOrigin(150, -150, 0)
+            self.mri_image_plane_source.SetPoint1(-150, -150, 0)
+            self.mri_image_plane_source.SetPoint2(150, 150, 0)
+            self.mri_image_plane_actor.SetUserTransform(transform)
+
+
+            self.draw_artifact_spheres()
+
             self.render_window.Render()
 
     def start_vtk(self):
@@ -205,15 +244,57 @@ class ScanSuiteWindow:
         self.window_interactor.SetRenderWindow(self.render_window)
         self.camera_manipulator_widget.SetParentRenderer(self.renderer)
         self.camera_manipulator_widget.On()
-        self.spline_widget.SetInteractor(self.window_interactor)
-        self.spline_widget.On()
+        # self.spline_widget.SetInteractor(self.window_interactor)
+        # self.spline_widget.On()
         self.render_window.Render()
         self.render_window.SetWindowName("3D Suite")
+        self.window_interactor.AddObserver("ExitEvent", self.close_event)
 
         data_thread = Thread(target=self.get_coordinate_data_thread, daemon=True)
         data_thread.start()
 
         self.window_interactor.Start()
+
+    def close_event(self, obj, event):
+        # Cleanup operations when window is closed
+        if self.registered:
+            self.Access.HostControl.release_host_control()
+            self.Access.Authorization.deregister()
+
+    def draw_artifact_spheres(self):
+        for actor in self.drawn_artifacts:
+            self.renderer.RemoveActor(actor)
+        self.drawn_artifacts.clear()
+
+        transform = vtk.vtkTransform()
+        transform.SetMatrix(self.mri_slice_actor.GetMatrix())
+
+        if self.tracking_data is not None:
+            if self.tracking_data.image is not None:
+                self.mri_image_plane_actor.VisibilityOn()
+                mri_image_texture = self.tracking_data.image.astype(np.uint8)
+                texture = vtkImageData()
+                texture.SetDimensions(mri_image_texture.shape[0], mri_image_texture.shape[1], 1)
+                texture.AllocateScalars(numpy_support.get_vtk_array_type(mri_image_texture.dtype), 3)
+                texture_ptr = numpy_support.numpy_to_vtk(mri_image_texture.ravel())
+                texture.GetPointData().SetScalars(texture_ptr)
+                mri_image_texture = vtkTexture()
+                mri_image_texture.SetInputData(texture)
+                mri_image_texture.InterpolateOn()
+                self.mri_image_plane_actor.SetTexture(mri_image_texture)
+            else:
+                self.mri_image_plane_actor.VisibilityOff()
+            for detected_artifact in self.tracking_data.artifact_coordinates:
+                # The coordinates are in mm, measured from top-left of the slice (image reference, but in mm).
+                # The Z coordinate is kept in the middle of the slice.
+                sphere_actor = self.add_sphere_actor()
+                sphere_actor.SetPosition(self.mri_slice_fov//2 - detected_artifact[0],
+                                         -self.mri_slice_fov//2 + detected_artifact[1],
+                                         0)
+                sphere_actor.SetUserTransform(transform)
+
+                self.renderer.AddActor(sphere_actor)
+                self.drawn_artifacts.append(sphere_actor)
 
     def get_coordinate_data_thread(self):
         while True:
@@ -222,23 +303,9 @@ class ScanSuiteWindow:
                 if self.SUBSCRIBE_PORT is not None:
                     data = self.subscriber_socket.recv()
                     tracking_data: ImageData = pickle.loads(data)
-                    self.current_mri_image = convert_metadata_to_image(tracking_data.metadata)
-                    # mri_plane_coordinates = tracking_data.metadata.value.image.coordinates.mrSliceDcs.position
-                    # mri_plane_dimension_mm = tracking_data.metadata.value.image.dimensions.columns * tracking_data.metadata.value.image.dimensions.voxelSize.column
-                    slice_position = self.mri_slice_actor.GetPosition()
-                    slice_orientation = self.mri_slice_actor.GetOrientation()
-                    transform = vtk.vtkTransform()
-                    transform.PostMultiply()
-                    transform.Translate(slice_position)
-                    transform.RotateZ(slice_orientation[2])
+                    tracking_data.image, metadata = convert_metadata_to_image(tracking_data.metadata)
+                    self.tracking_data = tracking_data
 
-                    transformed_coordinates = []
-                    for coord in tracking_data.artifact_coordinates:
-                        coord_3d = [coord[0], coord[1], slice_position[2]]
-                        coord_world = transform.TransformPoint(coord_3d)
-                        transformed_coordinates.append(coord_world)
-
-                    self.current_artifact_coordinates = transformed_coordinates
             except Exception as error:
                 print(f"Error in get_coordinate thread: {error}")
 
