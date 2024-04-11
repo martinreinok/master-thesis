@@ -14,7 +14,7 @@ from shared_methods import convert_websocket_data_to_image, calculate_latency
 class CNNModel(QObject):
     status_cnn_signal = Signal(str)
 
-    def __init__(self, window, subscribe_port, cnn_model="MODEL_512"):
+    def __init__(self, window, subscribe_port, cnn_model):
         super().__init__()
         self.PUBLISH_PORT = None
         self.SUBSCRIBE_PORT = subscribe_port

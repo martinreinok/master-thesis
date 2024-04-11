@@ -42,7 +42,7 @@ from scan_suite import ScanSuiteWindow
 
 """
 Live Server info:
-(optional) route add 192.168.182.0 mask 255.255.255.0 192.168.182.1 if 3 -p
+(optional) route add 192.168.182.0 mask 255.255.255.0 192.168.182.1 if 8 -p
 Access-i IP: 10.89.184.9
 Version: v1
 
@@ -60,7 +60,7 @@ DEVICE: Literal["cuda", "cpu"] = "cuda"
 IP_ADDRESS_DEFAULT = "10.89.184.9"
 VERSION_DEFAULT = "v1"
 CLIENT_NAME_DEFAULT = "Martin Reinok Python Client"
-OUTPUT_DIRECTORY_DEFAULT = "C:/Users/O/Desktop/Master Thesis/LOG_IMAGES/08.04.2024"
+OUTPUT_DIRECTORY_DEFAULT = "C:\\Users\\s2981416\\Desktop\\MRI_LOG"
 CNN_MODEL_DEFAULT = "MODEL_512_V3"
 
 
@@ -94,7 +94,7 @@ class MyMainWindow(QMainWindow):
         self.access_client: AccessiClient = AccessiClient(self.ui)
         self.accessi_websocket: AccessiWebsocket = AccessiWebsocket(access_instance=self.access_client.Access,
                                                                     window=self)
-        self.cnn: CNNModel = CNNModel(window=self, subscribe_port=None, cnn_model=CNN_MODEL_DEFAULT)
+        self.cnn: CNNModel = CNNModel(window=self, subscribe_port=None, cnn_model=None)
         self.tracking: GuidewireTracking = GuidewireTracking(window=self, subscribe_port=None)
         self.accessi_websocket.status_websocket_signal.connect(self.update_websocket_status)
 
@@ -159,7 +159,7 @@ class MyMainWindow(QMainWindow):
 
     def set_cnn_active(self):
         if self.ui.check_cnn_active.isChecked():
-            self.cnn = CNNModel(window=self, subscribe_port=self.accessi_websocket.PUBLISH_PORT)
+            self.cnn = CNNModel(window=self, subscribe_port=self.accessi_websocket.PUBLISH_PORT, cnn_model=CNN_MODEL_DEFAULT)
             self.cnn.status_cnn_signal.connect(self.update_cnn_status)
             self.cnn_thread = Thread(target=self.cnn.start, daemon=True, args=[DEVICE])
             self.cnn_thread.start()
