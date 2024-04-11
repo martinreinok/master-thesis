@@ -6,9 +6,21 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>726</width>
-    <height>557</height>
+    <width>700</width>
+    <height>550</height>
    </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>700</width>
+    <height>550</height>
+   </size>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>16777215</width>
+    <height>16777215</height>
+   </size>
   </property>
   <property name="windowTitle">
    <string>MainWindow</string>
@@ -770,7 +782,7 @@
              </property>
             </widget>
            </item>
-           <item row="13" column="0">
+           <item row="14" column="0">
             <widget class="QCheckBox" name="check_collision_detection_active">
              <property name="enabled">
               <bool>false</bool>
@@ -780,7 +792,7 @@
              </property>
             </widget>
            </item>
-           <item row="13" column="1">
+           <item row="14" column="1">
             <widget class="QCheckBox" name="check_collision_output">
              <property name="enabled">
               <bool>false</bool>
@@ -790,7 +802,7 @@
              </property>
             </widget>
            </item>
-           <item row="14" column="0" colspan="2">
+           <item row="15" column="0" colspan="2">
             <widget class="QLabel" name="status_collision_detection">
              <property name="text">
               <string/>
@@ -803,7 +815,7 @@
              </property>
             </widget>
            </item>
-           <item row="15" column="0">
+           <item row="16" column="0">
             <widget class="QCheckBox" name="check_cathbot_collision_feedback">
              <property name="enabled">
               <bool>false</bool>
@@ -816,7 +828,7 @@
              </property>
             </widget>
            </item>
-           <item row="16" column="0" colspan="2">
+           <item row="17" column="0" colspan="2">
             <widget class="QLabel" name="status_cathbot_feedback">
              <property name="text">
               <string/>
@@ -829,7 +841,7 @@
              </property>
             </widget>
            </item>
-           <item row="17" column="0">
+           <item row="18" column="0">
             <widget class="QCheckBox" name="check_collision_save">
              <property name="enabled">
               <bool>false</bool>
@@ -839,10 +851,35 @@
              </property>
             </widget>
            </item>
-           <item row="18" column="0">
+           <item row="19" column="0">
             <widget class="Line" name="line_4">
              <property name="orientation">
               <enum>Qt::Orientation::Horizontal</enum>
+             </property>
+            </widget>
+           </item>
+           <item row="13" column="0" colspan="2">
+            <widget class="QLabel" name="label_14">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="font">
+              <font>
+               <pointsize>8</pointsize>
+               <italic>true</italic>
+              </font>
+             </property>
+             <property name="text">
+              <string>Must be set before launching 3D Suite to have an effect</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignmentFlag::AlignCenter</set>
+             </property>
+             <property name="wordWrap">
+              <bool>true</bool>
+             </property>
+             <property name="textInteractionFlags">
+              <set>Qt::TextInteractionFlag::NoTextInteraction</set>
              </property>
             </widget>
            </item>
@@ -974,13 +1011,13 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>726</width>
+     <width>700</width>
      <height>33</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuScanSuite">
     <property name="title">
-     <string>ScanSuite</string>
+     <string>3D Suite</string>
     </property>
     <addaction name="actionOpen_3D_Scan_Suite"/>
    </widget>
@@ -989,7 +1026,7 @@
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionOpen_3D_Scan_Suite">
    <property name="text">
-    <string>Open 3D Scan Suite</string>
+    <string>Open 3D Suite</string>
    </property>
   </action>
   <action name="actionLight">

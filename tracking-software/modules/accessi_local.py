@@ -497,6 +497,28 @@ class ParameterStandard:
         return send_request(url, data, "GET")
 
     @staticmethod
+    def get_number_of_slice_groups():
+        """
+        Response example:
+         - "result":{"success":true,"reason":"ok","time":"20170608T143325.423"},
+         - "value":2
+        """
+        url = f"{config.base_url()}/parameter/standard/getNumberOfSliceGroups"
+        data = {"sessionId": config.session_id}
+        return send_request(url, data, "GET")
+
+    @staticmethod
+    def get_number_of_slices():
+        """
+        Response example:
+         - "result":{"success":true,"reason":"ok","time":"20170608T143325.423"},
+         - "value":2
+        """
+        url = f"{config.base_url()}/parameter/standard/getNumberOfSlices"
+        data = {"sessionId": config.session_id}
+        return send_request(url, data, "GET")
+
+    @staticmethod
     def set_slice_orientation_degrees_dcs(roll_degrees, pitch_degrees, yaw_degrees, allow_side_effects=True, index=0):
         """
         This math is not completely verified but seems to work.
@@ -589,6 +611,20 @@ class ParameterStandard:
         url = f"{config.base_url()}/parameter/standard/getFieldOfViewRead"
         data = {"sessionId": config.session_id}
         return send_request(url, data, "GET")
+
+    @staticmethod
+    def set_field_of_view_read(value, allow_side_effects=True):
+        """
+        Unit:mm
+        Response example:
+         - "result":{"success":true,"reason":"ok","time":"20170608T143325.423"},
+         - "valueSet":350.0
+        """
+        url = f"{config.base_url()}/parameter/standard/setFieldOfViewRead"
+        data = {"sessionId": config.session_id,
+                "value": value,
+                "allowSideEffects": allow_side_effects}
+        return send_request(url, data, "POST")
 
     @staticmethod
     def set_slice_thickness(value, allow_side_effects=True):

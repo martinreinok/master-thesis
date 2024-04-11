@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'main_uiucITvF.ui'
+## Form generated from reading UI file 'main_uiBCxqkl.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.7.0
 ##
@@ -27,7 +27,9 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(726, 557)
+        MainWindow.resize(700, 550)
+        MainWindow.setMinimumSize(QSize(700, 550))
+        MainWindow.setMaximumSize(QSize(16777215, 16777215))
         self.actionOpen_3D_Scan_Suite = QAction(MainWindow)
         self.actionOpen_3D_Scan_Suite.setObjectName(u"actionOpen_3D_Scan_Suite")
         self.actionLight = QAction(MainWindow)
@@ -478,46 +480,59 @@ class Ui_MainWindow(object):
         self.check_collision_detection_active.setObjectName(u"check_collision_detection_active")
         self.check_collision_detection_active.setEnabled(False)
 
-        self.formLayout_3.setWidget(13, QFormLayout.LabelRole, self.check_collision_detection_active)
+        self.formLayout_3.setWidget(14, QFormLayout.LabelRole, self.check_collision_detection_active)
 
         self.check_collision_output = QCheckBox(self.tab_3)
         self.check_collision_output.setObjectName(u"check_collision_output")
         self.check_collision_output.setEnabled(False)
 
-        self.formLayout_3.setWidget(13, QFormLayout.FieldRole, self.check_collision_output)
+        self.formLayout_3.setWidget(14, QFormLayout.FieldRole, self.check_collision_output)
 
         self.status_collision_detection = QLabel(self.tab_3)
         self.status_collision_detection.setObjectName(u"status_collision_detection")
         self.status_collision_detection.setWordWrap(True)
         self.status_collision_detection.setTextInteractionFlags(Qt.TextInteractionFlag.LinksAccessibleByKeyboard|Qt.TextInteractionFlag.LinksAccessibleByMouse|Qt.TextInteractionFlag.TextBrowserInteraction|Qt.TextInteractionFlag.TextSelectableByKeyboard|Qt.TextInteractionFlag.TextSelectableByMouse)
 
-        self.formLayout_3.setWidget(14, QFormLayout.SpanningRole, self.status_collision_detection)
+        self.formLayout_3.setWidget(15, QFormLayout.SpanningRole, self.status_collision_detection)
 
         self.check_cathbot_collision_feedback = QCheckBox(self.tab_3)
         self.check_cathbot_collision_feedback.setObjectName(u"check_cathbot_collision_feedback")
         self.check_cathbot_collision_feedback.setEnabled(False)
 
-        self.formLayout_3.setWidget(15, QFormLayout.LabelRole, self.check_cathbot_collision_feedback)
+        self.formLayout_3.setWidget(16, QFormLayout.LabelRole, self.check_cathbot_collision_feedback)
 
         self.status_cathbot_feedback = QLabel(self.tab_3)
         self.status_cathbot_feedback.setObjectName(u"status_cathbot_feedback")
         self.status_cathbot_feedback.setWordWrap(True)
         self.status_cathbot_feedback.setTextInteractionFlags(Qt.TextInteractionFlag.LinksAccessibleByKeyboard|Qt.TextInteractionFlag.LinksAccessibleByMouse|Qt.TextInteractionFlag.TextBrowserInteraction|Qt.TextInteractionFlag.TextSelectableByKeyboard|Qt.TextInteractionFlag.TextSelectableByMouse)
 
-        self.formLayout_3.setWidget(16, QFormLayout.SpanningRole, self.status_cathbot_feedback)
+        self.formLayout_3.setWidget(17, QFormLayout.SpanningRole, self.status_cathbot_feedback)
 
         self.check_collision_save = QCheckBox(self.tab_3)
         self.check_collision_save.setObjectName(u"check_collision_save")
         self.check_collision_save.setEnabled(False)
 
-        self.formLayout_3.setWidget(17, QFormLayout.LabelRole, self.check_collision_save)
+        self.formLayout_3.setWidget(18, QFormLayout.LabelRole, self.check_collision_save)
 
         self.line_4 = QFrame(self.tab_3)
         self.line_4.setObjectName(u"line_4")
         self.line_4.setFrameShape(QFrame.Shape.HLine)
         self.line_4.setFrameShadow(QFrame.Shadow.Sunken)
 
-        self.formLayout_3.setWidget(18, QFormLayout.LabelRole, self.line_4)
+        self.formLayout_3.setWidget(19, QFormLayout.LabelRole, self.line_4)
+
+        self.label_14 = QLabel(self.tab_3)
+        self.label_14.setObjectName(u"label_14")
+        self.label_14.setEnabled(False)
+        font2 = QFont()
+        font2.setPointSize(8)
+        font2.setItalic(True)
+        self.label_14.setFont(font2)
+        self.label_14.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.label_14.setWordWrap(True)
+        self.label_14.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
+
+        self.formLayout_3.setWidget(13, QFormLayout.SpanningRole, self.label_14)
 
         self.tabWidget_2.addTab(self.tab_3, "")
         self.tab_4 = QWidget()
@@ -603,7 +618,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 726, 33))
+        self.menubar.setGeometry(QRect(0, 0, 700, 33))
         self.menuScanSuite = QMenu(self.menubar)
         self.menuScanSuite.setObjectName(u"menuScanSuite")
         MainWindow.setMenuBar(self.menubar)
@@ -625,7 +640,7 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"MainWindow", None))
-        self.actionOpen_3D_Scan_Suite.setText(QCoreApplication.translate("MainWindow", u"Open 3D Scan Suite", None))
+        self.actionOpen_3D_Scan_Suite.setText(QCoreApplication.translate("MainWindow", u"Open 3D Suite", None))
         self.actionLight.setText(QCoreApplication.translate("MainWindow", u"Light", None))
         self.actionDark.setText(QCoreApplication.translate("MainWindow", u"Dark", None))
         self.label.setText(QCoreApplication.translate("MainWindow", u"Access-i Client", None))
@@ -686,6 +701,7 @@ class Ui_MainWindow(object):
         self.check_cathbot_collision_feedback.setText(QCoreApplication.translate("MainWindow", u"CathBot Haptic Feedback", None))
         self.status_cathbot_feedback.setText("")
         self.check_collision_save.setText(QCoreApplication.translate("MainWindow", u"Save Collision Images", None))
+        self.label_14.setText(QCoreApplication.translate("MainWindow", u"Must be set before launching 3D Suite to have an effect", None))
         self.tabWidget_2.setTabText(self.tabWidget_2.indexOf(self.tab_3), QCoreApplication.translate("MainWindow", u"Modules", None))
         self.label_11.setText(QCoreApplication.translate("MainWindow", u"Output Directory", None))
         self.button_select_output_dir.setText(QCoreApplication.translate("MainWindow", u"Choose...", None))
@@ -700,6 +716,6 @@ class Ui_MainWindow(object):
         self.combo_accessi_image_format.setItemText(1, QCoreApplication.translate("MainWindow", u"dicom", None))
 
         self.tabWidget_2.setTabText(self.tabWidget_2.indexOf(self.tab_4), QCoreApplication.translate("MainWindow", u"Output Settings", None))
-        self.menuScanSuite.setTitle(QCoreApplication.translate("MainWindow", u"ScanSuite", None))
+        self.menuScanSuite.setTitle(QCoreApplication.translate("MainWindow", u"3D Suite", None))
     # retranslateUi
 
