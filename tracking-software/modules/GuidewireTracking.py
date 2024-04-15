@@ -10,6 +10,7 @@ import accessi_local as Access
 from PySide6.QtCore import Signal, QObject
 from ImageData import ImageData
 from ArtifactTracker import ArtifactTracker
+from shared_methods import calculate_latency
 
 
 class GuidewireTracking(QObject):
@@ -81,6 +82,11 @@ class GuidewireTracking(QObject):
             centroids_mm = [[element * prediction.metadata.value.image.dimensions.voxelSize.column for element in sublist] for sublist in centroids]
             output_3d_suite = ImageData(metadata=prediction.metadata, artifact_coordinates=centroids_mm)
             self.raw_coordinate_publisher_socket.send(pickle.dumps(output_3d_suite))
+
+            if self.window.ui.check_save_latency_data.isChecked():
+                latency = calculate_latency(prediction.metadata, write_to_file=True, filename="Tracking_Latency")
+            else:
+                latency = calculate_latency(prediction.metadata)
 
             for tracker in self.trackers:
                 tracker.update(centroids)
