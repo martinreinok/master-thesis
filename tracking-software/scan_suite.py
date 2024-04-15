@@ -264,7 +264,7 @@ class ScanSuiteWindow:
                 if self.mri_image_metadata is not None:
                     # print(f"image_timestamp {self.mri_image_metadata.value.image.acquisition.time}, "
                     #       f"int: {int(self.mri_image_metadata.value.image.acquisition.time.replace('.', ''))}")
-                    # self.send_canbus_message(10, int(self.mri_image_metadata.value.image.acquisition.time.replace('.', '')))
+                    self.send_canbus_message(10, int(self.mri_image_metadata.value.image.acquisition.time.replace('.', '')))
                     if self.collision_detection:
                         calculate_latency(self.mri_image_metadata, write_to_file=True, filename="3DSuite_Latency")
 
