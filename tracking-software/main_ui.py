@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'main_uiBCxqkl.ui'
+## Form generated from reading UI file 'main_uihpVgYq.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.7.0
 ##
@@ -604,6 +604,11 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_4.addLayout(self.horizontalLayout_7)
 
+        self.check_save_latency_data = QCheckBox(self.tab_4)
+        self.check_save_latency_data.setObjectName(u"check_save_latency_data")
+
+        self.verticalLayout_4.addWidget(self.check_save_latency_data)
+
         self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
         self.verticalLayout_4.addItem(self.verticalSpacer)
@@ -715,6 +720,7 @@ class Ui_MainWindow(object):
         self.combo_accessi_image_format.setItemText(0, QCoreApplication.translate("MainWindow", u"raw16bit", None))
         self.combo_accessi_image_format.setItemText(1, QCoreApplication.translate("MainWindow", u"dicom", None))
 
+        self.check_save_latency_data.setText(QCoreApplication.translate("MainWindow", u"Save Timing Data (Each module separately, sync to NTP!)", None))
         self.tabWidget_2.setTabText(self.tabWidget_2.indexOf(self.tab_4), QCoreApplication.translate("MainWindow", u"Output Settings", None))
         self.menuScanSuite.setTitle(QCoreApplication.translate("MainWindow", u"3D Suite", None))
     # retranslateUi

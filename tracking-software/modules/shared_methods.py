@@ -30,11 +30,18 @@ def convert_metadata_to_image(metadata):
     return image, metadata
 
 
-def calculate_latency(metadata):
+def calculate_latency(metadata, write_to_file=False, filename="default_latency_log"):
     """
 
+    :param write_to_file:
+    :param filename:
     :param metadata: the 'image[2]' list from websocket imageStream.
     :return: latency compared to datetime.now() in seconds
     """
     image_timestamp = datetime.strptime(metadata.value.image.acquisition.time, '%H%M%S.%f')
-    return (datetime.strptime(datetime.now().strftime('%H%M%S.%f'), '%H%M%S.%f') - image_timestamp).total_seconds()
+    latency = (datetime.strptime(datetime.now().strftime('%H%M%S.%f'), '%H%M%S.%f') - image_timestamp).total_seconds()
+    if write_to_file:
+        with open(filename, 'a+') as file:
+            image_id = f"{image_timestamp.strftime('%H%M%S.%f')[:-3]}"
+            file.write(f"{image_id} | {datetime.now().strftime('%H%M%S.%f')} | {datetime.now()} | {latency}\n")
+    return latency

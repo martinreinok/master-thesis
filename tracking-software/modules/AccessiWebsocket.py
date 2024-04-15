@@ -34,7 +34,12 @@ class AccessiWebsocket(QObject):
                     if self.window.ui.combo_accessi_image_format.currentText() == "raw16bit":
                         publisher_socket.send(decoded_message)
                         _, metadata = convert_websocket_data_to_image(decoded_message)
-                        self.status_websocket_signal.emit(f"Latency: {calculate_latency(metadata)}s")
+                        if self.window.ui.check_save_latency_data.isChecked():
+                            latency = calculate_latency(metadata, write_to_file=True, filename="WebSocket_Latency")
+                        else:
+                            latency = calculate_latency(metadata)
+
+                        self.status_websocket_signal.emit(f"Latency: {latency}s")
                 except Exception as err:
                     if "received 1000 (OK); then sent 1000 (OK)" not in str(err):
                         print(f"Websocket error: {err}")

@@ -57,8 +57,8 @@ DNS1: 192.168.182.1
 """
 
 DEVICE: Literal["cuda", "cpu"] = "cuda"
-IP_ADDRESS_DEFAULT = "10.89.184.9"
-VERSION_DEFAULT = "v1"
+IP_ADDRESS_DEFAULT = "127.0.0.1"
+VERSION_DEFAULT = "v2"
 CLIENT_NAME_DEFAULT = "Martin Reinok Python Client"
 OUTPUT_DIRECTORY_DEFAULT = "C:\\Users\\s2981416\\Desktop\\MRI_LOG"
 CNN_MODEL_DEFAULT = "MODEL_512_V3"
@@ -186,7 +186,9 @@ class MyMainWindow(QMainWindow):
         self.scan_suite = multiprocessing.Process(target=ScanSuiteWindow.start,
                                                   args=(str(self.tracking.RAW_COORDINATE_PUBLISH_PORT),
                                                         str(self.ui.field_ip_address.text()),
-                                                        str(self.ui.field_version.text())))
+                                                        str(self.ui.field_version.text()),
+                                                        self.ui.check_collision_detection_active.isChecked(),
+                                                        self.ui.check_cathbot_collision_feedback.isChecked()))
         self.scan_suite.start()
 
     def show_websocket_output(self):

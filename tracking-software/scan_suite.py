@@ -1,5 +1,6 @@
 import pickle
 import time
+from datetime import datetime
 from threading import Thread
 from threading import Lock
 
@@ -17,6 +18,7 @@ from vtkmodules.util.misc import calldata_type
 
 import sys
 import os
+import can
 import numpy as np
 import vtk
 from vtkmodules.vtkFiltersCore import vtkCutter, vtkStripper
@@ -24,7 +26,7 @@ from vtkmodules.vtkFiltersCore import vtkCutter, vtkStripper
 sys.path.append("./modules")
 import modules.accessi_local as Access
 import modules.ImageData as ImageData
-from modules.shared_methods import convert_metadata_to_image
+from modules.shared_methods import convert_metadata_to_image, calculate_latency
 
 from PySide6.QtWidgets import QApplication, QMainWindow, QFileDialog
 import zmq
@@ -49,9 +51,13 @@ lineColor = vtkNamedColors().GetColor3d('peacock')
 
 
 class ScanSuiteWindow:
-    def __init__(self, SUBSCRIBE_PORT=None, accessi_ip_address=None, accessi_version=None):
+    def __init__(self, SUBSCRIBE_PORT=None, accessi_ip_address=None, accessi_version=None, collision_detection=False,
+                 cathbot_canbus_feedback=False):
         # this is awful but no comment, it works.
         self.SUBSCRIBE_PORT = SUBSCRIBE_PORT
+        self.collision_detection = collision_detection
+        self.cathbot_canbus_feedback = cathbot_canbus_feedback
+        self.canbus_connection = None
         self.subscriber_socket = None
         self.Access = Access
         self.registered = False
@@ -72,10 +78,15 @@ class ScanSuiteWindow:
         self.spline_widget = None
         self.drawn_artifacts = []
         self.tracking_data = None
+        self.mri_image_metadata = None
+        print(f"3D Suite started: collision_detection: {collision_detection}, "
+              f"cathbot_canbus_feedback: {cathbot_canbus_feedback}")
 
     @staticmethod
-    def start(SUBSCRIBE_PORT=None, accessi_ip_address=None, accessi_version=None):
-        scan_suite = ScanSuiteWindow(SUBSCRIBE_PORT, accessi_ip_address, accessi_version)
+    def start(SUBSCRIBE_PORT=None, accessi_ip_address=None, accessi_version=None,
+              collision_detection=False, cathbot_canbus_feedback=False):
+        scan_suite = ScanSuiteWindow(SUBSCRIBE_PORT, accessi_ip_address, accessi_version,
+                                     collision_detection, cathbot_canbus_feedback)
         scan_suite.register()
         scan_suite.initialize_vtk()
         scan_suite.add_mri_slice_actor()
@@ -107,7 +118,7 @@ class ScanSuiteWindow:
         self.window_interactor.SetRenderWindow(self.render_window)
 
         self.window_interactor.Initialize()
-        self.window_interactor.CreateRepeatingTimer(300)
+        self.window_interactor.CreateRepeatingTimer(150)
         self.window_interactor.AddObserver("TimerEvent", self.set_mri_slice_transform_callback)
         style = vtkInteractorStyleTrackballCamera()
         self.window_interactor.SetInteractorStyle(style)
@@ -201,6 +212,25 @@ class ScanSuiteWindow:
         self.spline_widget.SetProp3D(self.mri_slice_actor)
         self.spline_widget.AddObserver(vtkCommand.EndInteractionEvent, SplineCallback(self.spline_widget))
 
+    def send_canbus_message(self, current_continuous, current_peak):
+        if self.canbus_connection is None:
+            try:
+                self.canbus_connection = can.Bus(interface='ixxat', channel=0, bitrate=1000000)
+            except Exception as error:
+                print(f"Canbus connection: {error}")
+                self.canbus_connection = None
+        try:
+            msg = can.Message(
+                arbitration_id=0x997, data=bytes([current_continuous & 0xFF, (current_continuous >> 8) & 0xFF,
+                                                  (current_continuous >> 16) & 0xFF, (current_continuous >> 24) & 0xFF,
+                                                  current_peak & 0xFF, (current_peak >> 8) & 0xFF,
+                                                  (current_peak >> 16) & 0xFF, (current_peak >> 24) & 0xFF
+                                                  ]),
+                is_extended_id=False)
+            self.canbus_connection.send(msg)
+        except Exception as error:
+            print(f"Canbus error: {error}")
+
     @calldata_type(VTK_INT)
     def set_mri_slice_transform_callback(self, caller, timer_event, some_argument):
         if self.registered:
@@ -208,10 +238,11 @@ class ScanSuiteWindow:
             thickness = self.Access.ParameterStandard.get_slice_thickness().value
             field_of_view = self.Access.ParameterStandard.get_field_of_view_read().value
             orientation = self.Access.ParameterStandard.get_slice_orientation_degrees_dcs()
-
+            if not hasattr(orientation, "phase"):
+                return
             self.mri_slice_fov = field_of_view
             self.mri_slice_actor.SetPosition(position.x, -position.y, -position.z)
-            self.mri_slice_actor.SetOrientation(orientation.phase-90, orientation.read-90, orientation.normal)
+            self.mri_slice_actor.SetOrientation(orientation.phase - 90, orientation.read - 90, orientation.normal)
             self.mri_slice_object.SetXLength(field_of_view)
             self.mri_slice_object.SetYLength(field_of_view)
             self.mri_slice_object.SetZLength(int(thickness))
@@ -220,13 +251,22 @@ class ScanSuiteWindow:
             transform.SetMatrix(self.mri_slice_actor.GetMatrix())
             self.mri_slice_axes_actor.SetUserTransform(transform)
             # These points suck (╯°□°)╯︵ ┻━┻
-            self.mri_image_plane_source.SetOrigin((field_of_view//2), -(field_of_view//2), 0)
-            self.mri_image_plane_source.SetPoint1(-(field_of_view//2), -(field_of_view//2), 0)
-            self.mri_image_plane_source.SetPoint2((field_of_view//2), (field_of_view//2), 0)
+            self.mri_image_plane_source.SetOrigin((field_of_view // 2), -(field_of_view // 2), 0)
+            self.mri_image_plane_source.SetPoint1(-(field_of_view // 2), -(field_of_view // 2), 0)
+            self.mri_image_plane_source.SetPoint2((field_of_view // 2), (field_of_view // 2), 0)
             self.mri_image_plane_actor.SetUserTransform(transform)
 
-
             self.draw_artifact_spheres()
+            if self.collision_detection:
+                time.sleep(0.01)  # Calculate collision here.
+            # Send to CathBot here.
+            if self.cathbot_canbus_feedback:
+                if self.mri_image_metadata is not None:
+                    # print(f"image_timestamp {self.mri_image_metadata.value.image.acquisition.time}, "
+                    #       f"int: {int(self.mri_image_metadata.value.image.acquisition.time.replace('.', ''))}")
+                    # self.send_canbus_message(10, int(self.mri_image_metadata.value.image.acquisition.time.replace('.', '')))
+                    if self.collision_detection:
+                        calculate_latency(self.mri_image_metadata, write_to_file=True, filename="3DSuite_Latency")
 
             self.render_window.Render()
 
@@ -260,6 +300,8 @@ class ScanSuiteWindow:
         if self.registered:
             self.Access.HostControl.release_host_control()
             self.Access.Authorization.deregister()
+        if self.canbus_connection is not None:
+            self.canbus_connection.shutdown()
 
     def draw_artifact_spheres(self):
         for actor in self.drawn_artifacts:
@@ -288,8 +330,8 @@ class ScanSuiteWindow:
                 # The coordinates are in mm, measured from top-left of the slice (image reference, but in mm).
                 # The Z coordinate is kept in the middle of the slice.
                 sphere_actor = self.add_sphere_actor()
-                sphere_actor.SetPosition(self.mri_slice_fov//2 - detected_artifact[0],
-                                         -self.mri_slice_fov//2 + detected_artifact[1],
+                sphere_actor.SetPosition(self.mri_slice_fov // 2 - detected_artifact[0],
+                                         -self.mri_slice_fov // 2 + detected_artifact[1],
                                          0)
                 sphere_actor.SetUserTransform(transform)
 
@@ -298,13 +340,15 @@ class ScanSuiteWindow:
 
     def get_coordinate_data_thread(self):
         while True:
-            time.sleep(0.3)
+            time.sleep(0.1)
+            # It does need this sleep to keep the 3D UI properly responsive.
             try:
-                if self.SUBSCRIBE_PORT is not None:
+                if self.SUBSCRIBE_PORT is not None and self.subscriber_socket is not None:
                     data = self.subscriber_socket.recv()
                     tracking_data: ImageData = pickle.loads(data)
                     tracking_data.image, metadata = convert_metadata_to_image(tracking_data.metadata)
                     self.tracking_data = tracking_data
+                    self.mri_image_metadata = metadata
 
             except Exception as error:
                 print(f"Error in get_coordinate thread: {error}")

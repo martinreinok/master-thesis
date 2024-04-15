@@ -81,4 +81,9 @@ class CNNModel(QObject):
                 output_image = cv2.resize(output_image, self.input_image_dimensions)
                 output = ImageData(image_data=output_image, metadata=metadata)
                 publisher_socket.send(pickle.dumps(output))
-                self.status_cnn_signal.emit(f"Latency: {calculate_latency(metadata)}s")
+
+                if self.window.ui.check_save_latency_data.isChecked():
+                    latency = calculate_latency(metadata, write_to_file=True, filename="CNN_Latency")
+                else:
+                    latency = calculate_latency(metadata)
+                self.status_cnn_signal.emit(f"Latency: {latency}s")
