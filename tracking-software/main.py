@@ -42,7 +42,11 @@ from scan_suite import ScanSuiteWindow
 
 """
 Live Server info:
-(optional) route add 192.168.182.0 mask 255.255.255.0 192.168.182.1 if 8 -p
+(optional, add route IPv4 Route Table, 
+    Network Destination: 10.89.184.0,
+    Netmask: 255.255.255.0,
+    Interface: 192.168.182.20) 
+    route add 10.89.184.0 mask 255.255.255.0 192.168.182.20 if 8 -p
 Access-i IP: 10.89.184.9
 Version: v1
 
@@ -57,10 +61,10 @@ DNS1: 192.168.182.1
 """
 
 DEVICE: Literal["cuda", "cpu"] = "cuda"
-IP_ADDRESS_DEFAULT = "127.0.0.1"
-VERSION_DEFAULT = "v2"
+IP_ADDRESS_DEFAULT = "10.89.184.9"
+VERSION_DEFAULT = "v1"
 CLIENT_NAME_DEFAULT = "Martin Reinok Python Client"
-OUTPUT_DIRECTORY_DEFAULT = "C:\\Users\\s2981416\\Desktop\\MRI_LOG"
+OUTPUT_DIRECTORY_DEFAULT = "C:\\Users\\s2981416\\Desktop\\MRI_LOG\\15.04.2024 latency"
 CNN_MODEL_DEFAULT = "MODEL_512_V3"
 
 

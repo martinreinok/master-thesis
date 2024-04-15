@@ -118,7 +118,7 @@ class ScanSuiteWindow:
         self.window_interactor.SetRenderWindow(self.render_window)
 
         self.window_interactor.Initialize()
-        self.window_interactor.CreateRepeatingTimer(150)
+        self.window_interactor.CreateRepeatingTimer(100)
         self.window_interactor.AddObserver("TimerEvent", self.set_mri_slice_transform_callback)
         style = vtkInteractorStyleTrackballCamera()
         self.window_interactor.SetInteractorStyle(style)
@@ -264,9 +264,11 @@ class ScanSuiteWindow:
                 if self.mri_image_metadata is not None:
                     # print(f"image_timestamp {self.mri_image_metadata.value.image.acquisition.time}, "
                     #       f"int: {int(self.mri_image_metadata.value.image.acquisition.time.replace('.', ''))}")
-                    self.send_canbus_message(10, int(self.mri_image_metadata.value.image.acquisition.time.replace('.', '')))
+                    acquisition_time = self.mri_image_metadata.value.image.acquisition.time
+                    acquisition_time_without_last_two_digits = int(acquisition_time[:-2].replace('.', ''))
+                    self.send_canbus_message(10, acquisition_time_without_last_two_digits)
                     if self.collision_detection:
-                        calculate_latency(self.mri_image_metadata, write_to_file=True, filename="3DSuite_Latency")
+                        calculate_latency(self.mri_image_metadata, write_to_file=True, filename="3DSuite_Latency_0")
 
             self.render_window.Render()
 
