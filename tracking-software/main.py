@@ -61,8 +61,8 @@ DNS1: 192.168.182.1
 """
 
 DEVICE: Literal["cuda", "cpu"] = "cuda"
-IP_ADDRESS_DEFAULT = "10.89.184.9"
-VERSION_DEFAULT = "v1"
+IP_ADDRESS_DEFAULT = "127.0.0.1"
+VERSION_DEFAULT = "v2"
 CLIENT_NAME_DEFAULT = "Martin Reinok Python Client"
 OUTPUT_DIRECTORY_DEFAULT = "C:\\Users\\s2981416\\Desktop\\MRI_LOG\\15.04.2024 latency"
 CNN_MODEL_DEFAULT = "MODEL_512_V3"
@@ -141,6 +141,13 @@ class MyMainWindow(QMainWindow):
                        callable(getattr(Access.ParameterStandard, method)) and method.startswith("set_")]:
             self.ui.combo_set_parameter_choice.addItem(method)
 
+        for method in [method for method in dir(Access.Table) if
+                       callable(getattr(Access.Table, method)) and method.startswith("get_")]:
+            self.ui.combo_get_parameter_choice.addItem(method)
+
+        for method in [method for method in dir(Access.Table) if
+                       callable(getattr(Access.Table, method)) and method.startswith("set_")]:
+            self.ui.combo_set_parameter_choice.addItem(method)
         # for method in [method for method in dir(Access.ParameterConfigured) if
         #                callable(getattr(Access.ParameterConfigured, method)) and method.startswith("get_")]:
         #     self.ui.combo_get_parameter_choice.addItem(method)

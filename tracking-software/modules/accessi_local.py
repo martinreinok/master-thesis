@@ -663,6 +663,70 @@ class ParameterStandard:
         return send_request(url, data, "POST")
 
 
+class Table:
+    """
+    The table service was newly introduced in version 2 of the Access-i interface,
+     to reflect the new / changed table positioning modes that are available for the Numaris X Sola / Vida systems.
+     In contrast to Access-i version 1, the table positioning mode is set globally for the whole workflow,
+     i.e. not template-/protocol-specific. Therefore a dedicated service was introduced for this purpose.
+    """
+
+    @staticmethod
+    def get_current_table_position():
+        """
+        Response example:
+         - "result":{"success":true,"reason":"ok","time":"20170608T143325.423"},
+         - "value":120
+        """
+        url = f"{config.base_url()}/table/getCurrentTablePosition"
+        data = {"sessionId": config.session_id}
+        return send_request(url, data, "GET")
+
+    @staticmethod
+    def get_table_positioning_mode():
+        """
+        Response example:
+         - "result":{"success":true,"reason":"ok","time":"20170608T143325.423"},
+         - "value":"fix"
+        """
+        url = f"{config.base_url()}/table/getTablePositioningMode"
+        data = {"sessionId": config.session_id}
+        return send_request(url, data, "GET")
+
+    @staticmethod
+    def set_table_positioning_mode(value: Literal["isoCenter", "localRange", "fix"] = "isoCenter"):
+        """
+        Response example:
+         - "result":{"success":true,"reason":"ok","time":"20170608T143325.423"},
+         - "value":"fix"
+        """
+        url = f"{config.base_url()}/table/setTablePositioningMode"
+        data = {"sessionId": config.session_id, "value": value}
+        return send_request(url, data, "POST")
+
+    @staticmethod
+    def get_fix_table_position():
+        """
+        Response example:
+         - "result":{"success":true,"reason":"ok","time":"20170608T143325.423"},
+         - "value":123
+        """
+        url = f"{config.base_url()}/table/getFixTablePosition"
+        data = {"sessionId": config.session_id}
+        return send_request(url, data, "GET")
+
+    @staticmethod
+    def set_fix_table_position(value: int):
+        """
+        Response example:
+         - "result":{"success":true,"reason":"ok","time":"20170608T143325.423"}
+        """
+        url = f"{config.base_url()}/table/setFixTablePosition"
+        data = {"sessionId": config.session_id, "value": value}
+        return send_request(url, data, "POST")
+
+
+
 class Image:
     """
     Via the websocket functionality the client can automatically receive images that are reconstructed on the MR host.

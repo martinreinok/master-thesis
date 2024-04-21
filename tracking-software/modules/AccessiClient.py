@@ -125,39 +125,46 @@ class AccessiClient:
         self.Access.TemplateModification.close()
 
     def get_parameter(self):
-        # TODO: Make this not hardcoded to ParameterStandard
         parameter = self.ui.combo_get_parameter_choice.currentText()
         try:
-            if hasattr(self.Access.ParameterStandard, parameter):
-                answer = getattr(self.Access.ParameterStandard, parameter)()
-            else:
-                answer = getattr(self.Access.ParameterConfigured, parameter)()
-            if answer.result.success:
-                del answer.result
-                value = ""
-                for attr_name, attr_value in answer.__dict__.items():
-                    value += f"{attr_name}: {getattr(answer, attr_name)}\n"
-                self.ui.status_get_parameter.setText(f"{value}")
-            else:
-                self.ui.status_get_parameter.setText(f"{answer.result.reason}")
+            # Iterate through all classes in the Access module
+            for cls_name, cls in vars(self.Access).items():
+                if hasattr(cls, parameter):
+                    # Found the class with the parameter, invoke the method
+                    answer = getattr(cls, parameter)()
+                    if answer.result.success:
+                        del answer.result
+                        value = ""
+                        for attr_name, attr_value in answer.__dict__.items():
+                            value += f"{attr_name}: {getattr(answer, attr_name)}\n"
+                        self.ui.status_get_parameter.setText(f"{value}")
+                    else:
+                        self.ui.status_get_parameter.setText(f"{answer.result.reason}")
+                    return
+            # If no class with the parameter is found
+            self.ui.status_get_parameter.setText("Parameter not found")
         except Exception as err:
             self.ui.status_get_parameter.setText(f"Error: {err}")
 
     def set_parameter(self):
         parameter = self.ui.combo_set_parameter_choice.currentText()
         try:
-            val = [float(num.strip()) for num in self.ui.field_parameter_value.text().split(",")]
+            val = [num.strip() for num in self.ui.field_parameter_value.text().split(",")]
+            if len(val) >= 2 or val[0].isdigit():
+                val = [float(num) for num in val]
             if len(val) >= 9:
-                val_tuples = [(val[i], val[i + 1], val[i + 2]) for i in range(0, 9, 3)]
-                if hasattr(self.Access.ParameterStandard, parameter):
-                    answer = getattr(self.Access.ParameterStandard, parameter)(*val_tuples)
-                else:
-                    answer = getattr(self.Access.ParameterConfigured, parameter)(*val_tuples)
-            else:
-                answer = getattr(self.Access.ParameterStandard, parameter)(*val)
-            if answer.result.success:
-                self.ui.status_set_parameter.setText(f"valueSet: {answer.valueSet}" if hasattr(answer, 'valueSet') else str(answer))
-            else:
-                self.ui.status_set_parameter.setText(f"{answer.result.reason}")
+                val = [(val[i], val[i + 1], val[i + 2]) for i in range(0, 9, 3)]
+
+            for cls_name, cls in vars(self.Access).items():
+                if hasattr(cls, parameter):
+                    print()
+                    # Found the class with the parameter, invoke the method
+                    answer = getattr(cls, parameter)(*val)
+                    if answer.result.success:
+                        self.ui.status_set_parameter.setText(f"valueSet: {answer.valueSet}" if hasattr(answer, 'valueSet') else str(answer))
+                    else:
+                        self.ui.status_set_parameter.setText(f"{answer.result.reason}")
+                    return
+            self.ui.status_set_parameter.setText("Parameter not found")
         except Exception as err:
             self.ui.status_set_parameter.setText(f"Error: {err}")
