@@ -1,3 +1,4 @@
+import copy
 import pickle
 import time
 from datetime import datetime
@@ -21,7 +22,12 @@ import os
 import can
 import numpy as np
 import vtk
+from vtkmodules.vtkCommonMath import vtkMatrix4x4
+from vtkmodules.vtkCommonTransforms import vtkTransform
 from vtkmodules.vtkFiltersCore import vtkCutter, vtkStripper
+from vtkmodules.vtkFiltersGeneral import vtkIntersectionPolyDataFilter, vtkBooleanOperationPolyDataFilter, \
+    vtkTransformPolyDataFilter
+from vtkmodules.vtkFiltersModeling import vtkCollisionDetectionFilter
 
 sys.path.append("./modules")
 import modules.accessi_local as Access
@@ -44,6 +50,7 @@ from vtkmodules.vtkRenderingCore import (
     vtkRenderWindowInteractor,
     vtkRenderer, vtkTexture
 )
+from vtk import vtkOBBTree
 
 from vtk import vtkSTLReader
 
@@ -152,14 +159,14 @@ class ScanSuiteWindow:
 
     def add_sphere_actor(self):
         sphere_object = vtkSphereSource()
-        sphere_object.SetRadius(5)
+        sphere_object.SetRadius(50)
         mapper_sphere_object = vtkPolyDataMapper()
         mapper_sphere_object.SetInputConnection(sphere_object.GetOutputPort())
         sphere_actor = vtkActor()
         sphere_actor.SetMapper(mapper_sphere_object)
         sphere_actor.GetProperty().SetColor(1, 1, 0)
         self.renderer.AddActor(sphere_actor)
-        return sphere_actor
+        return sphere_object, sphere_actor
 
     def add_image_plane_actor(self):
         self.mri_image_plane_source = vtkPlaneSource()
@@ -212,22 +219,13 @@ class ScanSuiteWindow:
         self.spline_widget.SetProp3D(self.mri_slice_actor)
         self.spline_widget.AddObserver(vtkCommand.EndInteractionEvent, SplineCallback(self.spline_widget))
 
-    def send_canbus_message(self, current_continuous, current_peak):
-        if self.canbus_connection is None:
-            try:
-                self.canbus_connection = can.Bus(interface='ixxat', channel=0, bitrate=1000000)
-            except Exception as error:
-                print(f"Canbus connection: {error}")
-                self.canbus_connection = None
+    def send_canbus_message(self, collision: bool):
         try:
-            msg = can.Message(
-                arbitration_id=0x997, data=bytes([current_continuous & 0xFF, (current_continuous >> 8) & 0xFF,
-                                                  (current_continuous >> 16) & 0xFF, (current_continuous >> 24) & 0xFF,
-                                                  current_peak & 0xFF, (current_peak >> 8) & 0xFF,
-                                                  (current_peak >> 16) & 0xFF, (current_peak >> 24) & 0xFF
-                                                  ]),
-                is_extended_id=False)
-            self.canbus_connection.send(msg)
+            with can.Bus(interface='ixxat', channel=0, bitrate=1000000) as bus:
+                collision_msg = can.Message(arbitration_id=0x190, data=bytes(
+                    [collision & 0xFF]), is_extended_id=False)
+                bus.send(collision_msg)
+
         except Exception as error:
             print(f"Canbus error: {error}")
 
@@ -257,18 +255,34 @@ class ScanSuiteWindow:
             self.mri_image_plane_actor.SetUserTransform(transform)
 
             self.draw_artifact_spheres()
+            collision = False
             if self.collision_detection:
-                time.sleep(0.01)  # Calculate collision here.
+                for sphere_actor, sphere_source in self.drawn_artifacts:
+
+                    collide = vtkCollisionDetectionFilter()
+                    collide.SetInputConnection(0, self.stl_reader.GetOutputPort())
+                    collide.SetMatrix(0, self.stl_actor.GetMatrix())
+                    collide.SetInputConnection(1, sphere_source.GetOutputPort())
+                    collide.SetMatrix(1, sphere_actor.GetMatrix())
+                    collide.SetBoxTolerance(1)
+                    collide.SetCellTolerance(1)
+                    collide.SetCollisionModeToFirstContact()
+                    collide.Update()
+                    if collide.GetNumberOfContacts() > 0:
+                        collision = True
+
+            if collision:
+                print(f"Collision detected!")
+            else:
+                print(f"No Collision.")
+
             # Send to CathBot here.
             if self.cathbot_canbus_feedback:
+                self.send_canbus_message(collision)
                 if self.mri_image_metadata is not None:
-                    # print(f"image_timestamp {self.mri_image_metadata.value.image.acquisition.time}, "
-                    #       f"int: {int(self.mri_image_metadata.value.image.acquisition.time.replace('.', ''))}")
-                    acquisition_time = self.mri_image_metadata.value.image.acquisition.time
-                    acquisition_time_without_last_two_digits = int(acquisition_time[:-2].replace('.', ''))
-                    self.send_canbus_message(10, acquisition_time_without_last_two_digits)
-                    if self.collision_detection:
-                        calculate_latency(self.mri_image_metadata, write_to_file=True, filename="3DSuite_Latency_0")
+                    pass
+                    # if self.collision_detection:
+                    #     calculate_latency(self.mri_image_metadata, write_to_file=True, filename="3DSuite_Latency_0")
 
             self.render_window.Render()
 
@@ -306,7 +320,7 @@ class ScanSuiteWindow:
             self.canbus_connection.shutdown()
 
     def draw_artifact_spheres(self):
-        for actor in self.drawn_artifacts:
+        for actor, source in self.drawn_artifacts:
             self.renderer.RemoveActor(actor)
         self.drawn_artifacts.clear()
 
@@ -331,14 +345,14 @@ class ScanSuiteWindow:
             for detected_artifact in self.tracking_data.artifact_coordinates:
                 # The coordinates are in mm, measured from top-left of the slice (image reference, but in mm).
                 # The Z coordinate is kept in the middle of the slice.
-                sphere_actor = self.add_sphere_actor()
+                sphere_source, sphere_actor = self.add_sphere_actor()
                 sphere_actor.SetPosition(self.mri_slice_fov // 2 - detected_artifact[0],
                                          -self.mri_slice_fov // 2 + detected_artifact[1],
                                          0)
                 sphere_actor.SetUserTransform(transform)
 
                 self.renderer.AddActor(sphere_actor)
-                self.drawn_artifacts.append(sphere_actor)
+                self.drawn_artifacts.append([sphere_actor, sphere_source])
 
     def get_coordinate_data_thread(self):
         while True:

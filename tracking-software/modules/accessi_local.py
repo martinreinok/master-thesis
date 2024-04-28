@@ -726,7 +726,6 @@ class Table:
         return send_request(url, data, "POST")
 
 
-
 class Image:
     """
     Via the websocket functionality the client can automatically receive images that are reconstructed on the MR host.
