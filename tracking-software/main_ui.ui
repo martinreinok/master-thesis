@@ -1028,7 +1028,14 @@
     </property>
     <addaction name="actionOpen_3D_Scan_Suite"/>
    </widget>
+   <widget class="QMenu" name="menuCathBot_Settings">
+    <property name="title">
+     <string>CathBot Settings</string>
+    </property>
+    <addaction name="actionOpen_CathBot_CAN_Interface"/>
+   </widget>
    <addaction name="menuScanSuite"/>
+   <addaction name="menuCathBot_Settings"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionOpen_3D_Scan_Suite">
@@ -1053,6 +1060,11 @@
    </property>
    <property name="text">
     <string>Dark</string>
+   </property>
+  </action>
+  <action name="actionOpen_CathBot_CAN_Interface">
+   <property name="text">
+    <string>Open CathBot CAN Interface</string>
    </property>
   </action>
  </widget>

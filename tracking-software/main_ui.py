@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'main_uihpVgYq.ui'
+## Form generated from reading UI file 'main_uiufPMrr.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.7.0
 ##
@@ -39,6 +39,8 @@ class Ui_MainWindow(object):
         self.actionDark.setObjectName(u"actionDark")
         self.actionDark.setCheckable(True)
         self.actionDark.setChecked(True)
+        self.actionOpen_CathBot_CAN_Interface = QAction(MainWindow)
+        self.actionOpen_CathBot_CAN_Interface.setObjectName(u"actionOpen_CathBot_CAN_Interface")
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.horizontalLayout = QHBoxLayout(self.centralwidget)
@@ -626,13 +628,17 @@ class Ui_MainWindow(object):
         self.menubar.setGeometry(QRect(0, 0, 700, 33))
         self.menuScanSuite = QMenu(self.menubar)
         self.menuScanSuite.setObjectName(u"menuScanSuite")
+        self.menuCathBot_Settings = QMenu(self.menubar)
+        self.menuCathBot_Settings.setObjectName(u"menuCathBot_Settings")
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QStatusBar(MainWindow)
         self.statusbar.setObjectName(u"statusbar")
         MainWindow.setStatusBar(self.statusbar)
 
         self.menubar.addAction(self.menuScanSuite.menuAction())
+        self.menubar.addAction(self.menuCathBot_Settings.menuAction())
         self.menuScanSuite.addAction(self.actionOpen_3D_Scan_Suite)
+        self.menuCathBot_Settings.addAction(self.actionOpen_CathBot_CAN_Interface)
 
         self.retranslateUi(MainWindow)
 
@@ -648,6 +654,7 @@ class Ui_MainWindow(object):
         self.actionOpen_3D_Scan_Suite.setText(QCoreApplication.translate("MainWindow", u"Open 3D Suite", None))
         self.actionLight.setText(QCoreApplication.translate("MainWindow", u"Light", None))
         self.actionDark.setText(QCoreApplication.translate("MainWindow", u"Dark", None))
+        self.actionOpen_CathBot_CAN_Interface.setText(QCoreApplication.translate("MainWindow", u"Open CathBot CAN Interface", None))
         self.label.setText(QCoreApplication.translate("MainWindow", u"Access-i Client", None))
         self.label_3.setText(QCoreApplication.translate("MainWindow", u"IP Address", None))
         self.label_4.setText(QCoreApplication.translate("MainWindow", u"Client Name", None))
@@ -723,5 +730,6 @@ class Ui_MainWindow(object):
         self.check_save_latency_data.setText(QCoreApplication.translate("MainWindow", u"Save Timing Data (Each module separately, sync to NTP!)", None))
         self.tabWidget_2.setTabText(self.tabWidget_2.indexOf(self.tab_4), QCoreApplication.translate("MainWindow", u"Output Settings", None))
         self.menuScanSuite.setTitle(QCoreApplication.translate("MainWindow", u"3D Suite", None))
+        self.menuCathBot_Settings.setTitle(QCoreApplication.translate("MainWindow", u"CathBot Settings", None))
     # retranslateUi
 

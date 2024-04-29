@@ -1,16 +1,17 @@
 import sys
 import can
+import time
 from ui_interface import Ui_MainWindow
 from PySide6.QtWidgets import QApplication, QMainWindow, QSlider, QLineEdit
 
 
-class MyMainWindow(QMainWindow):
+class CathbotInterface(QMainWindow):
     def __init__(self):
         super().__init__()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
 
-        self.ui.pushButton.clicked.connect(self.send_canbus_message)
+        self.ui.pushButton.clicked.connect(self.send_master_canbus_message)
         self.ui.slider_default_resistance.valueChanged.connect(
             lambda: self.change_field_value_from_slider(self.ui.slider_default_resistance,
                                                         self.ui.field_default_resistance))
@@ -24,6 +25,16 @@ class MyMainWindow(QMainWindow):
             lambda: self.change_field_value_from_slider(self.ui.slider_rotary_translation,
                                                         self.ui.field_rotary_translation))
 
+        self.ui.button_catheter_clamp_forward.clicked.connect(self.move_catheter_clamp_forward)
+        self.ui.button_catheter_clamp_backward.clicked.connect(self.move_catheter_clamp_backward)
+        self.ui.button_catheter_rotate_forward.clicked.connect(self.move_catheter_rotate_forward)
+        self.ui.button_catheter_rotate_backward.clicked.connect(self.move_catheter_rotate_backward)
+
+        self.ui.button_guidewire_clamp_forward.clicked.connect(self.move_guidewire_clamp_forward)
+        self.ui.button_guidewire_clamp_backward.clicked.connect(self.move_guidewire_clamp_backward)
+        self.ui.button_guidewire_rotate_forward.clicked.connect(self.move_guidewire_rotate_forward)
+        self.ui.button_guidewire_rotate_backward.clicked.connect(self.move_guidewire_rotate_backward)
+
         # Call the functino to update default values
         self.change_field_value_from_slider(self.ui.slider_default_resistance, self.ui.field_default_resistance)
         self.change_field_value_from_slider(self.ui.slider_collision_resistance, self.ui.field_collision_resistance)
@@ -34,12 +45,46 @@ class MyMainWindow(QMainWindow):
     def change_field_value_from_slider(slider: QSlider, field: QLineEdit):
         field.setText(str(slider.value()))
 
-    def send_canbus_message(self):
+    def move_catheter_clamp_forward(self):
+        self.send_slave_canbus_message(0x501, True)
+
+    def move_catheter_clamp_backward(self):
+        self.send_slave_canbus_message(0x501, False)
+
+    def move_catheter_rotate_forward(self):
+        self.send_slave_canbus_message(0x502, True)
+
+    def move_catheter_rotate_backward(self):
+        self.send_slave_canbus_message(0x502, False)
+
+    def move_guidewire_clamp_forward(self):
+        self.send_slave_canbus_message(0x503, True)
+
+    def move_guidewire_clamp_backward(self):
+        self.send_slave_canbus_message(0x503, False)
+
+    def move_guidewire_rotate_forward(self):
+        self.send_slave_canbus_message(0x504, True)
+
+    def move_guidewire_rotate_backward(self):
+        self.send_slave_canbus_message(0x504, False)
+
+    def send_slave_canbus_message(self, can_id, data):
+        with can.Bus(interface='ixxat', channel=0, bitrate=1000000) as bus:
+            message = can.Message(arbitration_id=can_id, data=bytes(
+                [0xFF if data else 0x00]), is_extended_id=False)
+            try:
+                bus.send(message)
+                time.sleep(0.1)
+            except can.CanError:
+                print("Message NOT sent")
+
+    def send_master_canbus_message(self):
         with can.Bus(interface='ixxat', channel=0, bitrate=1000000) as bus:
             default_continuous_current = self.ui.slider_default_resistance.value()
-            default_peak_current = default_continuous_current * 1.2
+            default_peak_current = int(default_continuous_current * 1.2)
             collision_continuous_current = self.ui.slider_collision_resistance.value()
-            collision_peak_current = collision_continuous_current * 1.2
+            collision_peak_current = int(collision_continuous_current * 1.2)
 
             linear_translation = self.ui.slider_linear_translation.value()
             rotary_translation = self.ui.slider_rotary_translation.value()
@@ -47,7 +92,7 @@ class MyMainWindow(QMainWindow):
             collision_simulation = self.ui.check_simulate_collision.isChecked()
 
             simulate_collision_msg = can.Message(arbitration_id=0x190, data=bytes(
-                [rotary_translation & 0xFF]), is_extended_id=False)
+                [0xFF if collision_simulation else 0x00]), is_extended_id=False)
 
             default_current_msg = can.Message(arbitration_id=0x191, data=bytes(
                 [default_continuous_current & 0xFF, (default_continuous_current >> 8) & 0xFF,
@@ -70,17 +115,23 @@ class MyMainWindow(QMainWindow):
                  (rotary_translation >> 16) & 0xFF, (rotary_translation >> 24) & 0xFF]), is_extended_id=False)
 
             try:
-                bus.send(default_current_msg)
-                bus.send(collision_current_msg)
-                bus.send(linear_translation_msg)
-                bus.send(rotary_translation_msg)
-                bus.send(simulate_collision_msg)
+                for message in [default_current_msg, collision_current_msg, linear_translation_msg,
+                                rotary_translation_msg, simulate_collision_msg]:
+                    bus.send(message)
+                    time.sleep(0.1)
             except can.CanError:
                 print("Message NOT sent")
+
+    @staticmethod
+    def start():
+        app = QApplication(sys.argv)
+        window = CathbotInterface()
+        window.show()
+        sys.exit(app.exec())
 
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    window = MyMainWindow()
+    window = CathbotInterface()
     window.show()
     sys.exit(app.exec())

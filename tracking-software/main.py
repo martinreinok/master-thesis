@@ -26,7 +26,9 @@ ScanSuite is a standalone program, which can also be launched through the main U
 """
 
 import sys
+
 sys.path.append("./modules")
+sys.path.append("./cathbot_canbus_interface")
 import multiprocessing
 from typing import Literal
 from threading import Thread
@@ -38,6 +40,7 @@ from modules.CNNModel import CNNModel
 from modules.GuidewireTracking import GuidewireTracking
 from modules.VideoViewer import VideoViewer
 from modules.AccessiClient import AccessiClient
+
 from scan_suite import ScanSuiteWindow
 
 """
@@ -60,7 +63,7 @@ Gateway: 192.168.182.1
 DNS1: 192.168.182.1
 """
 
-DEVICE: Literal["cuda", "cpu"] = "cuda"
+DEVICE: Literal["cuda", "cpu"] = "cpu"
 IP_ADDRESS_DEFAULT = "127.0.0.1"
 VERSION_DEFAULT = "v2"
 CLIENT_NAME_DEFAULT = "Martin Reinok Python Client"
@@ -72,6 +75,7 @@ class MyMainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.scan_suite = None
+        self.cathbot_interface = None
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.ui.table_templates.setColumnCount(3)
@@ -117,6 +121,7 @@ class MyMainWindow(QMainWindow):
         self.ui.button_select_output_dir.clicked.connect(self.select_output_directory)
         self.ui.field_parameter_value.returnPressed.connect(self.access_client.set_parameter)
         self.ui.actionOpen_3D_Scan_Suite.triggered.connect(self.open_scan_suite)
+        self.ui.actionOpen_CathBot_CAN_Interface.triggered.connect(self.open_cathbot_interface)
 
         """
         Checkboxes
@@ -170,7 +175,8 @@ class MyMainWindow(QMainWindow):
 
     def set_cnn_active(self):
         if self.ui.check_cnn_active.isChecked():
-            self.cnn = CNNModel(window=self, subscribe_port=self.accessi_websocket.PUBLISH_PORT, cnn_model=CNN_MODEL_DEFAULT)
+            self.cnn = CNNModel(window=self, subscribe_port=self.accessi_websocket.PUBLISH_PORT,
+                                cnn_model=CNN_MODEL_DEFAULT)
             self.cnn.status_cnn_signal.connect(self.update_cnn_status)
             self.cnn_thread = Thread(target=self.cnn.start, daemon=True, args=[DEVICE])
             self.cnn_thread.start()
@@ -201,6 +207,12 @@ class MyMainWindow(QMainWindow):
                                                         self.ui.check_collision_detection_active.isChecked(),
                                                         self.ui.check_cathbot_collision_feedback.isChecked()))
         self.scan_suite.start()
+
+    def open_cathbot_interface(self):
+        # For updates during runtime, I import it again.
+        from cathbot_canbus_interface.cathbot_interface import CathbotInterface
+        self.cathbot_interface = multiprocessing.Process(target=CathbotInterface.start)
+        self.cathbot_interface.start()
 
     def show_websocket_output(self):
         if self.ui.check_websocket_output.isChecked():
