@@ -75,7 +75,7 @@ class CathbotInterface(QMainWindow):
                 [0xFF if data else 0x00]), is_extended_id=False)
             try:
                 bus.send(message)
-                time.sleep(0.1)
+                time.sleep(0.05)
             except can.CanError:
                 print("Message NOT sent")
 

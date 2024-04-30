@@ -125,7 +125,7 @@ class ScanSuiteWindow:
         self.window_interactor.SetRenderWindow(self.render_window)
 
         self.window_interactor.Initialize()
-        self.window_interactor.CreateRepeatingTimer(100)
+        self.window_interactor.CreateRepeatingTimer(200)
         self.window_interactor.AddObserver("TimerEvent", self.set_mri_slice_transform_callback)
         style = vtkInteractorStyleTrackballCamera()
         self.window_interactor.SetInteractorStyle(style)
@@ -270,6 +270,9 @@ class ScanSuiteWindow:
                     collide.Update()
                     if collide.GetNumberOfContacts() > 0:
                         collision = True
+                        sphere_actor.GetProperty().SetColor(1, 0, 0)
+                    else:
+                        sphere_actor.GetProperty().SetColor(1, 1, 0)
 
             if collision:
                 print(f"Collision detected!")
@@ -279,10 +282,6 @@ class ScanSuiteWindow:
             # Send to CathBot here.
             if self.cathbot_canbus_feedback:
                 self.send_canbus_message(collision)
-                if self.mri_image_metadata is not None:
-                    pass
-                    # if self.collision_detection:
-                    #     calculate_latency(self.mri_image_metadata, write_to_file=True, filename="3DSuite_Latency_0")
 
             self.render_window.Render()
 

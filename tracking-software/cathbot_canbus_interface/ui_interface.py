@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'interfaceOZsmRK.ui'
+## Form generated from reading UI file 'interfaceejgIAs.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.7.0
 ##
@@ -176,7 +176,7 @@ class Ui_MainWindow(object):
         self.tab_2.setObjectName(u"tab_2")
         self.button_catheter_clamp_forward = QPushButton(self.tab_2)
         self.button_catheter_clamp_forward.setObjectName(u"button_catheter_clamp_forward")
-        self.button_catheter_clamp_forward.setGeometry(QRect(20, 70, 40, 70))
+        self.button_catheter_clamp_forward.setGeometry(QRect(250, 70, 40, 70))
         font = QFont()
         font.setPointSize(30)
         font.setBold(False)
@@ -192,17 +192,17 @@ class Ui_MainWindow(object):
         self.label_5.setGeometry(QRect(20, 50, 91, 16))
         self.button_catheter_clamp_backward = QPushButton(self.tab_2)
         self.button_catheter_clamp_backward.setObjectName(u"button_catheter_clamp_backward")
-        self.button_catheter_clamp_backward.setGeometry(QRect(60, 70, 40, 70))
+        self.button_catheter_clamp_backward.setGeometry(QRect(290, 70, 40, 70))
         self.button_catheter_clamp_backward.setFont(font)
         self.button_catheter_clamp_backward.setAutoRepeat(True)
         self.button_catheter_rotate_forward = QPushButton(self.tab_2)
         self.button_catheter_rotate_forward.setObjectName(u"button_catheter_rotate_forward")
-        self.button_catheter_rotate_forward.setGeometry(QRect(130, 70, 40, 70))
+        self.button_catheter_rotate_forward.setGeometry(QRect(370, 70, 40, 70))
         self.button_catheter_rotate_forward.setFont(font)
         self.button_catheter_rotate_forward.setAutoRepeat(True)
         self.button_catheter_rotate_backward = QPushButton(self.tab_2)
         self.button_catheter_rotate_backward.setObjectName(u"button_catheter_rotate_backward")
-        self.button_catheter_rotate_backward.setGeometry(QRect(170, 70, 40, 70))
+        self.button_catheter_rotate_backward.setGeometry(QRect(410, 70, 40, 70))
         self.button_catheter_rotate_backward.setFont(font)
         self.button_catheter_rotate_backward.setAutoRepeat(True)
         self.label_11 = QLabel(self.tab_2)
@@ -213,12 +213,12 @@ class Ui_MainWindow(object):
         self.label_12.setGeometry(QRect(250, 50, 101, 16))
         self.button_guidewire_clamp_backward = QPushButton(self.tab_2)
         self.button_guidewire_clamp_backward.setObjectName(u"button_guidewire_clamp_backward")
-        self.button_guidewire_clamp_backward.setGeometry(QRect(290, 70, 40, 70))
+        self.button_guidewire_clamp_backward.setGeometry(QRect(70, 70, 40, 70))
         self.button_guidewire_clamp_backward.setFont(font)
         self.button_guidewire_clamp_backward.setAutoRepeat(True)
         self.button_guidewire_clamp_forward = QPushButton(self.tab_2)
         self.button_guidewire_clamp_forward.setObjectName(u"button_guidewire_clamp_forward")
-        self.button_guidewire_clamp_forward.setGeometry(QRect(250, 70, 40, 70))
+        self.button_guidewire_clamp_forward.setGeometry(QRect(30, 70, 40, 70))
         self.button_guidewire_clamp_forward.setFont(font)
         self.button_guidewire_clamp_forward.setAutoRepeat(True)
         self.label_13 = QLabel(self.tab_2)
@@ -226,12 +226,12 @@ class Ui_MainWindow(object):
         self.label_13.setGeometry(QRect(370, 50, 101, 16))
         self.button_guidewire_rotate_backward = QPushButton(self.tab_2)
         self.button_guidewire_rotate_backward.setObjectName(u"button_guidewire_rotate_backward")
-        self.button_guidewire_rotate_backward.setGeometry(QRect(410, 70, 40, 70))
+        self.button_guidewire_rotate_backward.setGeometry(QRect(170, 70, 40, 70))
         self.button_guidewire_rotate_backward.setFont(font)
         self.button_guidewire_rotate_backward.setAutoRepeat(True)
         self.button_guidewire_rotate_forward = QPushButton(self.tab_2)
         self.button_guidewire_rotate_forward.setObjectName(u"button_guidewire_rotate_forward")
-        self.button_guidewire_rotate_forward.setGeometry(QRect(370, 70, 40, 70))
+        self.button_guidewire_rotate_forward.setGeometry(QRect(130, 70, 40, 70))
         self.button_guidewire_rotate_forward.setFont(font)
         self.button_guidewire_rotate_forward.setAutoRepeat(True)
         self.tabWidget.addTab(self.tab_2, "")

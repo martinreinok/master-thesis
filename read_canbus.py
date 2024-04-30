@@ -16,10 +16,10 @@ class CustomCanListener(can.Listener):
             # print("Received CAN message:")
             # print("Grip Status:", grip_status)
             # print("Guidewire Button:", guidewire_button)
-            print("Catheter Button:", catheter_button)
+            # print("Catheter Button:", catheter_button)
             # print("Rotary Motor Position:", rotary_motor_position)
             # print("Rotary Motor Conversion:", rotary_motor_conversion)
-            # print("Linear Motor Position:", linear_motor_position)
+            print("Linear Motor Position:", linear_motor_position)
             # print("Linear Motor Conversion:", linear_motor_conversion)
 
 
