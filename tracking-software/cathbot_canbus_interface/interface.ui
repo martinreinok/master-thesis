@@ -521,6 +521,32 @@
          <bool>true</bool>
         </property>
        </widget>
+       <widget class="QCheckBox" name="check_clamp_catheter">
+        <property name="geometry">
+         <rect>
+          <x>20</x>
+          <y>180</y>
+          <width>111</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Clamp Catheter</string>
+        </property>
+       </widget>
+       <widget class="QCheckBox" name="check_clamp_guidewire">
+        <property name="geometry">
+         <rect>
+          <x>240</x>
+          <y>180</y>
+          <width>121</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Clamp Guidewire</string>
+        </property>
+       </widget>
       </widget>
      </widget>
     </item>

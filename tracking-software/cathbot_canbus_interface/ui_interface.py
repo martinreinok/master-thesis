@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'interfaceejgIAs.ui'
+## Form generated from reading UI file 'interfaceEdASro.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.7.0
 ##
@@ -234,6 +234,12 @@ class Ui_MainWindow(object):
         self.button_guidewire_rotate_forward.setGeometry(QRect(130, 70, 40, 70))
         self.button_guidewire_rotate_forward.setFont(font)
         self.button_guidewire_rotate_forward.setAutoRepeat(True)
+        self.check_clamp_catheter = QCheckBox(self.tab_2)
+        self.check_clamp_catheter.setObjectName(u"check_clamp_catheter")
+        self.check_clamp_catheter.setGeometry(QRect(20, 180, 111, 20))
+        self.check_clamp_guidewire = QCheckBox(self.tab_2)
+        self.check_clamp_guidewire.setObjectName(u"check_clamp_guidewire")
+        self.check_clamp_guidewire.setGeometry(QRect(240, 180, 121, 20))
         self.tabWidget.addTab(self.tab_2, "")
 
         self.verticalLayout.addWidget(self.tabWidget)
@@ -280,6 +286,8 @@ class Ui_MainWindow(object):
         self.label_13.setText(QCoreApplication.translate("MainWindow", u"Rotate: Guidewire", None))
         self.button_guidewire_rotate_backward.setText(QCoreApplication.translate("MainWindow", u"\u2192", None))
         self.button_guidewire_rotate_forward.setText(QCoreApplication.translate("MainWindow", u"\u2190", None))
+        self.check_clamp_catheter.setText(QCoreApplication.translate("MainWindow", u"Clamp Catheter", None))
+        self.check_clamp_guidewire.setText(QCoreApplication.translate("MainWindow", u"Clamp Guidewire", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_2), QCoreApplication.translate("MainWindow", u"Slave", None))
     # retranslateUi
 

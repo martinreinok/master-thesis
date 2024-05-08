@@ -35,7 +35,12 @@ class CathbotInterface(QMainWindow):
         self.ui.button_guidewire_rotate_forward.clicked.connect(self.move_guidewire_rotate_forward)
         self.ui.button_guidewire_rotate_backward.clicked.connect(self.move_guidewire_rotate_backward)
 
-        # Call the functino to update default values
+        self.ui.check_clamp_catheter.stateChanged.connect(
+            lambda state: self.send_switch_catheter_clamp(self.ui.check_clamp_catheter))
+        self.ui.check_clamp_guidewire.stateChanged.connect(
+            lambda state: self.send_switch_guidewire_clamp(self.ui.check_clamp_catheter))
+
+        # Call the function to update default values
         self.change_field_value_from_slider(self.ui.slider_default_resistance, self.ui.field_default_resistance)
         self.change_field_value_from_slider(self.ui.slider_collision_resistance, self.ui.field_collision_resistance)
         self.change_field_value_from_slider(self.ui.slider_linear_translation, self.ui.field_linear_translation)
@@ -68,6 +73,26 @@ class CathbotInterface(QMainWindow):
 
     def move_guidewire_rotate_backward(self):
         self.send_slave_canbus_message(0x504, False)
+
+    def send_switch_catheter_clamp(self, checkbox_object):
+        with can.Bus(interface='ixxat', channel=0, bitrate=1000000) as bus:
+            message = can.Message(arbitration_id=0x505, data=bytes(
+                [0xFF if checkbox_object.isChecked() else 0x00]), is_extended_id=False)
+            try:
+                bus.send(message)
+                time.sleep(0.05)
+            except can.CanError:
+                print("Message NOT sent")
+
+    def send_switch_guidewire_clamp(self, checkbox_object):
+        with can.Bus(interface='ixxat', channel=0, bitrate=1000000) as bus:
+            message = can.Message(arbitration_id=0x506, data=bytes(
+                [0xFF if checkbox_object.isChecked() else 0x00]), is_extended_id=False)
+            try:
+                bus.send(message)
+                time.sleep(0.05)
+            except can.CanError:
+                print("Message NOT sent")
 
     def send_slave_canbus_message(self, can_id, data):
         with can.Bus(interface='ixxat', channel=0, bitrate=1000000) as bus:
