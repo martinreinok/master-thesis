@@ -159,7 +159,7 @@ class ScanSuiteWindow:
 
     def add_sphere_actor(self):
         sphere_object = vtkSphereSource()
-        sphere_object.SetRadius(50)
+        sphere_object.SetRadius(5)
         mapper_sphere_object = vtkPolyDataMapper()
         mapper_sphere_object.SetInputConnection(sphere_object.GetOutputPort())
         sphere_actor = vtkActor()
