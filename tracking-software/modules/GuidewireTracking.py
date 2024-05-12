@@ -100,6 +100,7 @@ class GuidewireTracking(QObject):
                     tracker_id += 1
 
             average_movement = []
+            largest_movement = None
             for tracker in self.trackers:
                 if len(tracker.trajectory) >= 2:
                     initial_coordinate, current_coordinate = tracker.trajectory[0], tracker.trajectory[-1]
@@ -110,27 +111,29 @@ class GuidewireTracking(QObject):
                 # Insignificant movements e.g. standing still are not considered.
                 if np.linalg.norm(np.array(tracker.movement_vector)) > movement_threshold_mm:
                     average_movement.append(tracker.movement_vector)
+                    if largest_movement is None:
+                        largest_movement = tracker
+                        continue
+                    if np.linalg.norm(np.array(largest_movement.movement_vector)) < np.linalg.norm(np.array(tracker.movement_vector)):
+                        largest_movement = tracker
 
-            if average_movement:
-                average_movement = np.mean(average_movement, axis=0)
-                # print(f"Average movement px: {average_movement}")
-                # print(f"Voxel size: {prediction.metadata.value.image.dimensions.voxelSize.column}")
-                self.status_guidewire_tracking_signal.emit(
-                    f"({len(self.trackers)}) Move: {average_movement[0]} | {average_movement[1]} (px)")
-            elif not average_movement and len(self.trackers) > 0:
+            if largest_movement is not None and len(largest_movement.movement_vector) > 1:
+                # average_movement = np.mean(average_movement, axis=0)
+                self.status_guidewire_tracking_signal.emit(f"({len(self.trackers)}) Move: {largest_movement.movement_vector[0]} | {largest_movement.movement_vector[1]} (px)")
+            elif not largest_movement and len(self.trackers) > 0:
                 self.status_guidewire_tracking_signal.emit(f"({len(self.trackers)}) No movement detected")
             else:
                 self.status_guidewire_tracking_signal.emit("No guidewire detected.")
 
             output = ImageData(image_data=threshold, metadata=prediction.metadata)
             self.publisher_socket.send(pickle.dumps(output))
-            if len(average_movement) == 2:
-                movement_request = abs(average_movement[0]) + abs(average_movement[1])
-                if self.move_slice and movement_request > movement_threshold_mm:
-                    self.move_slice_to_target(side_to_side_x=self.convert_px_to_mm(average_movement[0], prediction.metadata),
-                                              forward_z=self.convert_px_to_mm(average_movement[1], prediction.metadata))
 
-    def move_slice_to_target(self, side_to_side_x, forward_z):
+            if self.move_slice and largest_movement is not None and len(largest_movement.movement_vector) > 1:
+                self.move_slice_to_target(side_to_side_x=self.convert_px_to_mm(largest_movement.movement_vector[0], prediction.metadata),
+                                          forward_z=self.convert_px_to_mm(largest_movement.movement_vector[1], prediction.metadata),
+                                          largest_movement_tracker=largest_movement)
+
+    def move_slice_to_target(self, side_to_side_x, forward_z, largest_movement_tracker):
         current_location = self.MRI.get_slice_position_dcs().value
         target_location = [current_location.x + side_to_side_x,
                            current_location.y,
@@ -142,7 +145,7 @@ class GuidewireTracking(QObject):
         """
         Wait for changes to take effect (this is not good)
         """
-        allowed_difference = 3
+        allowed_difference = 2
         while True:
             data = self.subscriber_socket.recv()
             prediction: ImageData = pickle.loads(data)
@@ -151,5 +154,6 @@ class GuidewireTracking(QObject):
             diff_y = abs(new_location.y - target_location[1]) < allowed_difference
             diff_z = abs(new_location.z - target_location[2]) < allowed_difference
             if all([diff_x, diff_y, diff_z]):
-                self.trackers = []
+                # Retain the tracker that was used to move
+                self.trackers = [ArtifactTracker(largest_movement_tracker.initial_coordinate, largest_movement_tracker.id)]
                 break
