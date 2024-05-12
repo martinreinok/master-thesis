@@ -129,8 +129,8 @@ class GuidewireTracking(QObject):
             self.publisher_socket.send(pickle.dumps(output))
 
             if self.move_slice and largest_movement is not None and len(largest_movement.movement_vector) > 1:
-                self.move_slice_to_target(side_to_side_x=self.convert_px_to_mm(largest_movement.movement_vector[0], prediction.metadata),
-                                          forward_z=self.convert_px_to_mm(largest_movement.movement_vector[1], prediction.metadata),
+                self.move_slice_to_target(side_to_side_x=int(self.convert_px_to_mm(largest_movement.movement_vector[0], prediction.metadata)),
+                                          forward_z=int(self.convert_px_to_mm(largest_movement.movement_vector[1], prediction.metadata)),
                                           largest_movement_tracker=largest_movement)
 
     def move_slice_to_target(self, side_to_side_x, forward_z, largest_movement_tracker):
