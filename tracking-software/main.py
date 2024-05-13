@@ -63,11 +63,11 @@ Gateway: 192.168.182.1
 DNS1: 192.168.182.1
 """
 
-DEVICE: Literal["cuda", "cpu"] = "cpu"
-IP_ADDRESS_DEFAULT = "127.0.0.1"
-VERSION_DEFAULT = "v2"
+DEVICE: Literal["cuda", "cpu"] = "cuda"
+IP_ADDRESS_DEFAULT = "10.89.184.9"
+VERSION_DEFAULT = "v1"
 CLIENT_NAME_DEFAULT = "Martin Reinok Python Client"
-OUTPUT_DIRECTORY_DEFAULT = "C:\\Users\\s2981416\\Desktop\\MRI_LOG\\15.04.2024 latency"
+OUTPUT_DIRECTORY_DEFAULT = "C:\\Users\\s2981416\\Desktop\\MRI_LOG\\13.05.2024 non-clinical tests"
 CNN_MODEL_DEFAULT = "MODEL_512_V3"
 
 

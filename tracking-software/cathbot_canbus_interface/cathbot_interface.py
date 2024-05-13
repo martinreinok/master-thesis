@@ -38,7 +38,7 @@ class CathbotInterface(QMainWindow):
         self.ui.check_clamp_catheter.stateChanged.connect(
             lambda state: self.send_switch_catheter_clamp(self.ui.check_clamp_catheter))
         self.ui.check_clamp_guidewire.stateChanged.connect(
-            lambda state: self.send_switch_guidewire_clamp(self.ui.check_clamp_catheter))
+            lambda state: self.send_switch_guidewire_clamp(self.ui.check_clamp_guidewire))
 
         # Call the function to update default values
         self.change_field_value_from_slider(self.ui.slider_default_resistance, self.ui.field_default_resistance)
