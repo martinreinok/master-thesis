@@ -59,7 +59,7 @@ class GuidewireTracking(QObject):
             self.voxel_size = metadata.value.image.dimensions.voxelSize.column
         return self.voxel_size * px
 
-    def start(self, movement_threshold_mm=2):
+    def start(self, movement_threshold_mm=3):
         context = zmq.Context()
         self.subscriber_socket = context.socket(zmq.SUB)
         self.subscriber_socket.setsockopt(zmq.CONFLATE, 1)

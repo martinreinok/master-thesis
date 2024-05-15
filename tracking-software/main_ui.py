@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'main_uiufPMrr.ui'
+## Form generated from reading UI file 'main_uigUjNTi.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.7.0
 ##
@@ -650,7 +650,7 @@ class Ui_MainWindow(object):
     # setupUi
 
     def retranslateUi(self, MainWindow):
-        MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"MainWindow", None))
+        MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"Hub", None))
         self.actionOpen_3D_Scan_Suite.setText(QCoreApplication.translate("MainWindow", u"Open 3D Suite", None))
         self.actionLight.setText(QCoreApplication.translate("MainWindow", u"Light", None))
         self.actionDark.setText(QCoreApplication.translate("MainWindow", u"Dark", None))

@@ -11,7 +11,7 @@ class ArtifactTracker:
     Did not manage to get any existing trackers to work, so why not just reinvent the wheel...
     """
 
-    def __init__(self, initial_coordinate, artifact_id, max_range=30):
+    def __init__(self, initial_coordinate, artifact_id, max_range=15):
         self.max_range = max_range
         self.initial_coordinate = initial_coordinate
         self.coordinates = initial_coordinate

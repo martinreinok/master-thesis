@@ -39,6 +39,7 @@ class CNNModel(QObject):
 
     def predict(self, image_data):
         try:
+            # image_data = cv2.imread("new_guidewire-img-00001-00001.png", cv2.IMREAD_GRAYSCALE)
             image = cv2.resize(image_data, (350, 350)).astype(np.float32) / 255.0
             cnn_input = image.reshape(1, 1, image.shape[0], image.shape[1])
             props = {'spacing': (999, 1, 1)}
