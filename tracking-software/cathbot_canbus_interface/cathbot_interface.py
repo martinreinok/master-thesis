@@ -51,46 +51,46 @@ class CathbotInterface(QMainWindow):
         field.setText(str(slider.value()))
 
     def move_catheter_clamp_forward(self):
-        self.send_slave_canbus_message(0x501, True)
+        self.send_slave_canbus_message(0x041, True)
 
     def move_catheter_clamp_backward(self):
-        self.send_slave_canbus_message(0x501, False)
+        self.send_slave_canbus_message(0x041, False)
 
     def move_catheter_rotate_forward(self):
-        self.send_slave_canbus_message(0x502, True)
+        self.send_slave_canbus_message(0x042, True)
 
     def move_catheter_rotate_backward(self):
-        self.send_slave_canbus_message(0x502, False)
+        self.send_slave_canbus_message(0x042, False)
 
     def move_guidewire_clamp_forward(self):
-        self.send_slave_canbus_message(0x503, True)
+        self.send_slave_canbus_message(0x043, True)
 
     def move_guidewire_clamp_backward(self):
-        self.send_slave_canbus_message(0x503, False)
+        self.send_slave_canbus_message(0x043, False)
 
     def move_guidewire_rotate_forward(self):
-        self.send_slave_canbus_message(0x504, True)
+        self.send_slave_canbus_message(0x044, True)
 
     def move_guidewire_rotate_backward(self):
-        self.send_slave_canbus_message(0x504, False)
+        self.send_slave_canbus_message(0x044, False)
 
     def send_switch_catheter_clamp(self, checkbox_object):
         with can.Bus(interface='ixxat', channel=0, bitrate=1000000) as bus:
-            message = can.Message(arbitration_id=0x505, data=bytes(
+            message = can.Message(arbitration_id=0x045, data=bytes(
                 [0xFF if checkbox_object.isChecked() else 0x00]), is_extended_id=False)
             try:
                 bus.send(message)
-                time.sleep(0.05)
+                time.sleep(0.2)
             except can.CanError:
                 print("Message NOT sent")
 
     def send_switch_guidewire_clamp(self, checkbox_object):
         with can.Bus(interface='ixxat', channel=0, bitrate=1000000) as bus:
-            message = can.Message(arbitration_id=0x506, data=bytes(
+            message = can.Message(arbitration_id=0x046, data=bytes(
                 [0xFF if checkbox_object.isChecked() else 0x00]), is_extended_id=False)
             try:
                 bus.send(message)
-                time.sleep(0.05)
+                time.sleep(0.2)
             except can.CanError:
                 print("Message NOT sent")
 
@@ -100,7 +100,7 @@ class CathbotInterface(QMainWindow):
                 [0xFF if data else 0x00]), is_extended_id=False)
             try:
                 bus.send(message)
-                time.sleep(0.05)
+                time.sleep(0.2)
             except can.CanError:
                 print("Message NOT sent")
 
@@ -143,7 +143,7 @@ class CathbotInterface(QMainWindow):
                 for message in [default_current_msg, collision_current_msg, linear_translation_msg,
                                 rotary_translation_msg, simulate_collision_msg]:
                     bus.send(message)
-                    time.sleep(0.1)
+                    time.sleep(0.2)
             except can.CanError:
                 print("Message NOT sent")
 
