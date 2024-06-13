@@ -33,7 +33,7 @@ class GuidewireTracking(QObject):
         self.trackers = []
 
     @staticmethod
-    def find_artifact_centroids(image, kernel: int = 7):
+    def find_artifact_centroids(image, kernel: int = 3):
         """
         Applies gaussian blur and thresholding to separate artifacts from noise.
         The center of gravity of each remaining blob is returned.

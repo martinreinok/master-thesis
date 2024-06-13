@@ -1,6 +1,8 @@
 """
 
 """
+import os
+import re
 
 import cv2
 import zmq
@@ -39,7 +41,7 @@ class CNNModel(QObject):
 
     def predict(self, image_data):
         try:
-            # image_data = cv2.imread("new_guidewire-img-00001-00001.png", cv2.IMREAD_GRAYSCALE)
+            image_data = cv2.imread("new_guidewire-img-00001-00001.png", cv2.IMREAD_GRAYSCALE)
             image = cv2.resize(image_data, (350, 350)).astype(np.float32) / 255.0
             cnn_input = image.reshape(1, 1, image.shape[0], image.shape[1])
             props = {'spacing': (999, 1, 1)}
@@ -52,7 +54,7 @@ class CNNModel(QObject):
     def start(self, DEVICE):
         # imports are here because they take a long time. They are in a separate thread.
         import torch
-        from nnunetv2.inference.predict_from_raw_data import nnUNetPredictor
+        # from nnunetv2.inference.predict_from_raw_data import nnUNetPredictor
         context = zmq.Context()
         subscriber_socket = context.socket(zmq.SUB)
         subscriber_socket.setsockopt(zmq.CONFLATE, 1)
@@ -60,9 +62,9 @@ class CNNModel(QObject):
         subscriber_socket.subscribe("")
         publisher_socket = context.socket(zmq.PUB)
         self.PUBLISH_PORT = publisher_socket.bind_to_random_port("tcp://127.0.0.1")
-        self.model = self.prepare_cnn(torch=torch, nnUNetPredictor=nnUNetPredictor,
-                                      path_to_model_directory=self.path_to_model_directory, folds=self.folds,
-                                      checkpoint_name=self.checkpoint_name, DEVICE=DEVICE)
+        # self.model = self.prepare_cnn(torch=torch, nnUNetPredictor=nnUNetPredictor,
+        #                               path_to_model_directory=self.path_to_model_directory, folds=self.folds,
+        #                               checkpoint_name=self.checkpoint_name, DEVICE=DEVICE)
         for checkbox in [self.window.ui.check_cnn_output, self.window.ui.check_cnn_save,
                          self.window.ui.check_guidewire_tracking_active,
                          self.window.ui.check_tracking_move_slice, self.window.ui.check_collision_detection_active,
@@ -70,21 +72,41 @@ class CNNModel(QObject):
                          self.window.ui.check_tracking_save]:
             checkbox.setEnabled(True)
             checkbox.stateChanged.emit(checkbox.isChecked())
+
+        folder_path = r"C:\Users\O\Desktop\Master Thesis\LOG_IMAGES\06.03.2024 tracking-test-image-log\VIDEO\CNN"
+        image_files = sorted(os.listdir(folder_path), key=lambda x: int(re.search(r'(\d+)', x).group(1)))
+
+        index = 0
+        previous_button_state = self.window.ui.check_save_latency_data.isChecked()
         while self.window.ui.check_cnn_active.isChecked():
             data = subscriber_socket.recv()
             image, metadata = convert_websocket_data_to_image(data)
             if image is None:
                 continue
-            self.input_image_dimensions = (metadata.value.image.dimensions.columns, metadata.value.image.dimensions.rows)
-            output_image = self.predict(image)
-            if output_image is not None:
-                output_image = (output_image * 255).astype(np.uint8)
-                output_image = cv2.resize(output_image, self.input_image_dimensions)
-                output = ImageData(image_data=output_image, metadata=metadata)
-                publisher_socket.send(pickle.dumps(output))
+            self.input_image_dimensions = (
+            metadata.value.image.dimensions.columns, metadata.value.image.dimensions.rows)
+            # output_image = self.predict(image)
+            if self.window.ui.check_save_latency_data.isChecked() != previous_button_state:
+                print(f"Loading image {image_files[index]}")
+                output_image = cv2.imread(f"{folder_path}/{image_files[index]}", cv2.IMREAD_GRAYSCALE)
+                if output_image is not None:
+                    # output_image = (output_image * 255).astype(np.uint8)
+                    output_image = cv2.resize(output_image, self.input_image_dimensions)
+                    output = ImageData(image_data=output_image, metadata=metadata)
+                    publisher_socket.send(pickle.dumps(output))
 
-                if self.window.ui.check_save_latency_data.isChecked():
-                    latency = calculate_latency(metadata, write_to_file=True, filename="CNN_Latency")
-                else:
-                    latency = calculate_latency(metadata)
-                self.status_cnn_signal.emit(f"Latency: {latency}s")
+                    if self.window.ui.check_save_latency_data.isChecked():
+                        latency = calculate_latency(metadata, write_to_file=True, filename="CNN_Latency")
+                    else:
+                        latency = calculate_latency(metadata)
+                    self.status_cnn_signal.emit(f"Latency: {latency}s")
+                index += 1
+                previous_button_state = self.window.ui.check_save_latency_data.isChecked()
+            else:
+                output_image = cv2.imread(f"{folder_path}/{image_files[index]}", cv2.IMREAD_GRAYSCALE)
+                if output_image is not None:
+                    # output_image = (output_image * 255).astype(np.uint8)
+                    output_image = cv2.resize(output_image, self.input_image_dimensions)
+                    output = ImageData(image_data=output_image, metadata=metadata)
+                    publisher_socket.send(pickle.dumps(output))
+

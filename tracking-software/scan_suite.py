@@ -240,8 +240,8 @@ class ScanSuiteWindow:
                 return
             self.mri_slice_fov = field_of_view
             self.mri_slice_actor.SetPosition(position.x, -position.y, -position.z)
-            self.mri_slice_actor.SetOrientation(orientation.phase - 90, orientation.read - 90, orientation.normal)
-            # self.mri_slice_actor.SetOrientation(orientation.phase-90, orientation.read-180, orientation.normal-90)
+            # self.mri_slice_actor.SetOrientation(orientation.phase - 90, orientation.read - 90, orientation.normal)
+            self.mri_slice_actor.SetOrientation(orientation.phase-90, orientation.read, orientation.normal)
             self.mri_slice_object.SetXLength(field_of_view)
             self.mri_slice_object.SetYLength(field_of_view)
             self.mri_slice_object.SetZLength(int(thickness))

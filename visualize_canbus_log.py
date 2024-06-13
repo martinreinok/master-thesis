@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 
 # Open the log file
-with open("canbus_log/logfile03.05.2024", "r") as log_file:
+with open("canbus_log/log13.05.2024_test", "r") as log_file:
     # Parse log file and extract relevant data
     timestamps = []
     rotary_positions = []

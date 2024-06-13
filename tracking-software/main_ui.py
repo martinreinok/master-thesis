@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'main_uigUjNTi.ui'
+## Form generated from reading UI file 'main_uiPOvhtw.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.7.0
 ##
@@ -696,7 +696,7 @@ class Ui_MainWindow(object):
         self.status_websocket_image.setText("")
         self.check_cnn_active.setText(QCoreApplication.translate("MainWindow", u"CNN Active", None))
         self.check_cnn_output.setText(QCoreApplication.translate("MainWindow", u"Show Output", None))
-        self.check_cnn_save.setText(QCoreApplication.translate("MainWindow", u"Save Websocket Images", None))
+        self.check_cnn_save.setText(QCoreApplication.translate("MainWindow", u"Save Images", None))
         self.status_cnn.setText("")
         self.check_guidewire_tracking_active.setText(QCoreApplication.translate("MainWindow", u"Guidewire Tracking", None))
         self.check_tracking_output.setText(QCoreApplication.translate("MainWindow", u"Show Output", None))
